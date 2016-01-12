@@ -11,7 +11,7 @@
 #include <signal.h>
 #include "config.h"
 
-#define MAXFIELDS	12
+#define MAXFIELDS	16
 #define MAXHEADERLEN	16
 #define PATH_SOCKET	".sockets/meter"
 #define PROTO_VERSION	1

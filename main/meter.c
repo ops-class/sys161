@@ -25,6 +25,7 @@ struct meter {
 };
 
 static int meter_socket = -1;
+static int meter_interval = METER_NSECS;
 
 static
 void
@@ -42,10 +43,10 @@ meter_header(struct meter *m)
 {
 	char buf[4096];
 	snprintf(buf, sizeof(buf), 
-		 "HEAD kern user idle kinsns uinsns irqs exns disk con emu net\r\n");
+		 "HEAD kern user idle kinsns uinsns irqs exns disk con emu net nsec\r\n");
 	write(m->fd, buf, strlen(buf));
 	snprintf(buf, sizeof(buf),
-		 "WIDTH 9 9 9 7 7 4 4 4 5 4 4\r\n");
+		 "WIDTH 9 9 9 7 7 4 4 4 5 4 4 11\r\n");
 	write(m->fd, buf, strlen(buf));
 }
 
@@ -57,6 +58,7 @@ meter_report(struct meter *m)
 	char buf2[512];
 	uint64_t kcycles, ucycles, icycles;
 	uint64_t kretired, uretired;
+	uint64_t secs, nsecs;
 
 #if 0
 	kcycles = g_stats.s_kcycles;
@@ -88,6 +90,11 @@ meter_report(struct meter *m)
 	Assert(kretired <= kcycles);
 	Assert(uretired <= ucycles);
 #endif
+	
+	secs = 0;
+	nsecs = 0;
+	clock_offset((uint32_t *)&secs, (uint32_t *)&nsecs);
+	nsecs += (secs * 1000 * 1000 * 1000);
 
 	snprintf(buf2, sizeof(buf2), "%llu %llu %llu %llu %llu",
 		 (unsigned long long) kcycles,
@@ -96,15 +103,15 @@ meter_report(struct meter *m)
 		 (unsigned long long) kretired,
 		 (unsigned long long) uretired);
 
-	snprintf(buf, sizeof(buf), "DATA %s %lu %lu %lu %lu %lu %lu\r\n",
+	snprintf(buf, sizeof(buf), "DATA %s %lu %lu %lu %lu %lu %lu %llu\r\n",
 		 buf2,
 		 (unsigned long) g_stats.s_irqs,
 		 (unsigned long) g_stats.s_exns,
 		 (unsigned long) (g_stats.s_rsects + g_stats.s_wsects),
 		 (unsigned long) (g_stats.s_rchars + g_stats.s_wchars),
-		 (unsigned long) (g_stats.s_remu + g_stats.s_wemu + 
-				  g_stats.s_memu),
-		 (unsigned long) (g_stats.s_rpkts + g_stats.s_wpkts));
+		 (unsigned long) (g_stats.s_remu + g_stats.s_wemu + g_stats.s_memu),
+		 (unsigned long) (g_stats.s_rpkts + g_stats.s_wpkts),
+		 (unsigned long long) nsecs);
 
 	write(m->fd, buf, strlen(buf));
 }
@@ -123,7 +130,7 @@ meter_update(void *x, uint32_t junk)
 	}
 
 	meter_report(m);
-	schedule_event(METER_NSECS, m, 0, meter_update, "perfmeter");
+	schedule_event(meter_interval * 1000, m, 0, meter_update, "perfmeter");
 }
 
 static
@@ -235,4 +242,9 @@ meter_init(const char *pathname)
 
 	meter_socket = sfd;
 	onselect(meter_socket, NULL, meter_accept, NULL);
+}
+
+void
+meter_setinterval(int interval) {
+  meter_interval = interval;
 }

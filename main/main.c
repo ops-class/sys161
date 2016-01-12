@@ -361,6 +361,7 @@ usage(void)
 #endif
 	msg("     -p port        Listen for gdb over TCP on specified port");
 	msg("     -s             Pass signal-generating characters through");
+	msg("     -S usec        Set stat reporting interval");
 #ifdef USE_TRACE
 	msg("     -t[kujtxidne]  Set tracing flags");
 	print_traceflags_usage();
@@ -386,6 +387,7 @@ main(int argc, char *argv[])
 	int debugwait=0;
 	int pass_signals=0;
 	int timeout;
+	int interval;
 #ifdef USE_TRACE
 	int profiling=0;
 #endif
@@ -403,7 +405,7 @@ main(int argc, char *argv[])
 		die();
 	}
 
-	while ((opt = mygetopt(argc, argv, "c:D:f:p:Pst:wXZ:"))!=-1) {
+	while ((opt = mygetopt(argc, argv, "c:D:f:p:PsS:t:wXZ:"))!=-1) {
 		switch (opt) {
 		    case 'c': config = myoptarg; break;
 		    case 'D': doom = atoi(myoptarg); break;
@@ -419,6 +421,13 @@ main(int argc, char *argv[])
 #endif
 			break;
 		    case 's': pass_signals = 1; break;
+		    case 'S':
+			interval = atoi(myoptarg);
+			if (interval <= 1) {
+				msg("Invalid interval (must be at least 1)");
+			}
+			meter_setinterval(interval);
+			break;
 		    case 't': 
 #ifdef USE_TRACE
 			set_traceflags(myoptarg); 
