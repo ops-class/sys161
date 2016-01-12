@@ -1,0 +1,948 @@
+#!/bin/sh
+#
+# We need the following stuff:
+#
+#     1. Source location
+#     2. CPU type
+#     3. C compiler
+#     4. C compiler warning options
+#     5. Endianness
+#     6. CHAR_BIT
+#     7. sized integer types
+#     8. if we need -D_FILE_OFFSET_BITS=64 or similar
+#     9. if we need -D_GNU_SOURCE or similar
+#
+
+if [ -f doc/lamebus.html ]; then
+    SRCDIR=""
+else
+    SRCDIR=`echo "$0" | sed 's,[^/]*$,,'`
+fi
+
+while [ "x$1" != x ]; do
+    case "$1" in
+	--help) cat <<EOF
+Usage: ./configure [options] cpu_architecture
+Options are:
+    --help              Print this message
+    --with-compiler=CC  Use CC as compiler [probed]
+    --prefix=DIR        Install under DIR [/usr/local]
+    --destdir=DIR       Install under chroot tree DIR [empty]
+    --bindir=DIR        Install programs into DIR [PREFIX/bin]
+    --exampledir=DIR    Install examples in DIR [PREFIX/share/examples/sys161]
+    --docdir=DIR        Install docs into DIR [PREFIX/share/doc/sys161]
+    --mandir=DIR        Install man pages into DIR [PREFIX/man]
+    --devel             Turn on lots of warnings [default off]
+    --debug             Turn on debug symbols for sys161 itself [default off]
+Architectures are:
+EOF
+	cat ${SRCDIR}*/cpuinfo.txt
+    exit 0
+    ;;
+	--with-compiler=*) CC=`echo $1 | sed 's/^[^=]*=//'`;;
+	--prefix=*) PREFIX=`echo $1 | sed 's/^[^=]*=//'`;;
+	--destdir=*) DESTDIR=`echo $1 | sed 's/^[^=]*=//'`;;
+	--bindir=*) BINDIR=`echo $1 | sed 's/^[^=]*=//'`;;
+	--exampledir=*) EXAMPLEDIR=`echo $1 | sed 's/^[^=]*=//'`;;
+	--docdir=*) DOCDIR=`echo $1 | sed 's/^[^=]*=//'`;;
+	--mandir=*) MANDIR=`echo $1 | sed 's/^[^=]*=//'`;;
+	--devel) USEWARNS=1;;
+	--debug) USEDEBUG=1;;
+	--*) echo "Unknown option $1 (try --help)"; exit 1;;
+	*) 
+	    if [ "x$CPU" != x ]; then
+		echo "Cannot configure more than one architecture"
+		exit 1
+	    fi
+	    CPU="$1";
+	    ;;
+    esac
+shift
+done
+
+############################################################
+
+printf 'Looking for source code... '
+
+if [ "x$SRCDIR" = "x" ]; then
+    printf 'here\n'
+else
+    if [ -f ${SRCDIR}doc/lamebus.html ]; then
+	printf "$SRCDIR\n"
+    else
+	printf 'missing\n'
+	printf "Cannot find source - please run $0 out of the source tree\n"
+	exit 1
+    fi
+fi
+
+############################################################
+
+if [ "x$CPU" = x ]; then
+    printf "No architecture specified.\n"
+    printf "Use --help to get a list of supported architectures.\n"
+    exit 1
+fi
+
+if [ ! -f "${SRCDIR}$CPU/cpuinfo.txt" ]; then
+    printf "Invalid architecture $CPU (try --help for a list)\n"
+    exit 1
+fi
+
+printf "Checking architecture... $CPU\n"
+
+############################################################
+
+rm -f __config.h
+
+echo '/* Automatically generated file; do not edit */' > __config.h
+
+############################################################
+
+printf "Checking for C compiler... "
+
+cat >__conftest.c <<EOF
+int main() {
+    return 0;
+}
+EOF
+
+OS=`uname || echo unknown`
+HCPU=`uname -m || echo unknown`
+
+if [ "x$OS" = xOSF1 -a "x$HCPU" = xalpha ]; then
+    # Prefer DEC cc to gcc
+    COMPILERS="cc gcc egcs"
+else
+    COMPILERS="gcc egcs cc"
+fi
+
+for TRYCC in "$CC" $COMPILERS; do
+    if ($TRYCC __conftest.c -o __conftest) >/dev/null 2>&1; then
+	if (./__conftest) >/dev/null 2>&1; then
+	    GOTCC="$TRYCC"
+	    break;
+	fi
+    fi
+done
+
+if [ "x$GOTCC" = x ]; then
+    printf "not found\n"
+    printf "Cannot find C compiler - please use the --with-compiler option\n"
+    rm -f __conf*
+    exit 1
+fi
+
+CC="$GOTCC"
+printf "$CC\n"
+
+############################################################
+
+printf "Checking if $CC is DEC cc... "
+
+if $CC -V 2>&1 | grep "DEC C " >/dev/null 2>&1; then
+    DECC=1;
+    printf 'yes\n'
+else
+    printf 'no\n'
+fi
+
+printf "Checking if $CC is gcc... "
+if $CC -v 2>&1 | egrep 'gcc version' >/dev/null 2>&1; then
+    GCC=1;
+    printf 'yes\n'
+else
+    printf 'no\n'
+fi
+
+
+############################################################
+
+if [ x$DECC = x1 ]; then
+    WARN="-std1 -check -msg_error level5 -warnprotos"
+    OPT="-fast -O3"
+elif [ x$GCC = x1 ]; then
+    WARN="-Wall -W -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Werror"
+    OPT="-O3"
+else
+    WARN=""
+    OPT="-O"
+fi
+
+if [ "x$USEWARNS" != x ]; then
+    printf "Checking warning options... $WARN\n"
+    CFLAGS=`echo "$CFLAGS $WARN" | sed 's/^ *//;s/ *$//'`
+fi
+
+if [ "x$USEDEBUG" = x1 ]; then
+    OPT="-g"
+fi
+
+printf "Checking optimization options... $OPT\n"
+
+############################################################
+
+printf "Checking if compiler understands inline... "
+cat >__conftest.c <<EOF
+static inline int foo(void) {
+    return 6;
+}
+int bar(int x) {
+    return foo()*x;
+}
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "yes\n"
+else
+    printf "no\n"
+    echo "#define inline" >> __config.h
+fi
+
+############################################################
+
+printf "Checking endianness... "
+
+cat >__conftest.c <<EOF
+#include <stdio.h>
+int main() {
+    unsigned long x = 1;
+    unsigned char *c = (unsigned char *)&x;
+    if (c[sizeof(x)-1]==1) {
+       printf("big\n");
+    }
+    else if (c[0]==1) {
+       printf("little\n");
+    }
+    else return 1;
+    return 0;
+}
+EOF
+
+$CC __conftest.c -o __conftest
+
+ENDIAN=`./__conftest || echo unknown`
+
+case $ENDIAN in
+     little)
+	printf 'little-endian\n'
+	echo '#define QUAD_HIGHWORD 1' >> __config.h
+	echo '#define QUAD_LOWWORD  0' >> __config.h
+	;;
+     big)
+	printf 'big-endian\n'
+	echo '#define QUAD_HIGHWORD 0' >> __config.h
+	echo '#define QUAD_LOWWORD  1' >> __config.h
+	;;
+     *) printf 'unknown\n'; 
+        printf 'Help!\n'; 
+	rm -f __conf*
+        exit 1
+	;;
+esac
+
+############################################################
+
+printf "Checking if ftruncate is hidden behind _GNU_SOURCE... "
+
+cat > __conftest.c <<EOF
+#include <unistd.h>
+int foo(int fd) {
+    return ftruncate(fd, 12345);
+}
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "no\n"
+else
+    if $CC -c -D_GNU_SOURCE  __conftest.c >/dev/null 2>&1; then
+	printf "yes\n"
+	printf "Your C library is broken.\n"
+	if uname -a | grep -i linux >/dev/null 2>&1; then
+	    printf '(Film at 11.)\n'
+	fi
+	CFLAGS="$CFLAGS -D_GNU_SOURCE"
+    else
+	printf "missing\n"
+	printf "Cannot find ftruncate - this probably will not work\n"
+    fi
+fi
+
+############################################################
+
+printf "Checking number of bits in a char... "
+
+cat > __conftest.c <<EOF
+#include <stdio.h>
+int main() {
+    unsigned char x=1;
+    int i;
+    for (i=0; i<128; i++) {
+        if ((unsigned char)(x << i) == 0) {
+	   printf("%d\n", i);
+	   return 0;
+        }
+    }
+    return 1;
+}
+EOF
+
+$CC __conftest.c -o __conftest
+
+CHARBIT=`./__conftest || echo unknown`
+
+if [ x"$CHARBIT" = xunknown ]; then
+    printf 'unknown\n'
+    printf 'Help!\n'
+    rm -f __conf*
+    exit 1
+fi
+
+printf "$CHARBIT\n"
+
+(
+    echo '#ifndef CHAR_BIT'
+    echo '#define CHAR_BIT '"$CHARBIT"
+    echo '#endif'
+) >> __config.h
+
+############################################################
+
+printf "Checking sized integer types... "
+
+cat > __conftest2.c <<EOF
+#include <stdlib.h>
+#include <stdio.h>
+int main(int argc, char *argv[]) {
+    size_t x = atoi(argv[1]);
+    size_t bits = atoi(argv[2]);
+    if (x==sizeof(char)*bits) printf("char\n");
+    else if (x==sizeof(short)*bits) printf("short\n");
+    else if (x==sizeof(int)*bits) printf("int\n");
+    else if (x==sizeof(long)*bits) printf("long\n");
+    else if (x==sizeof(long long)*bits) printf("long long\n");
+    else printf("unknown\n");
+    return 0;
+}
+EOF
+
+$CC __conftest2.c -o __conftest2
+
+for size in 8 16 32 64; do
+    for sign in uint int; do
+	echo '#include <sys/types.h>' > __conftest.c
+	echo '#include <stdint.h>' >> __conftest.c
+	echo "${sign}${size}_t x;" >> __conftest.c
+
+	if $CC -c __conftest.c >/dev/null 2>&1; then
+	    break;
+	fi
+
+	if [ $sign = uint ]; then
+	    echo '#include <sys/types.h>' > __conftest.c
+	    echo '#include <stdint.h>' >> __conftest.c
+	    echo "u_int${size}_t x;" >> __conftest.c
+
+	    if $CC -c __conftest.c >/dev/null 2>&1; then
+		echo '#include <sys/types.h>' >> __config.h;
+		echo '#include <stdint.h>' >> __config.h
+		echo "typedef u_int${size}_t uint${size}_t;" >> __config.h;
+		break;
+	    fi
+	fi
+
+	RESULT=`./__conftest2 $size $CHARBIT 2>/dev/null || echo unknown`
+
+	if [ "x$RESULT" = xunknown ]; then
+	    printf 'oops\n'
+	    printf "Cannot determine type for ${sign}${size}_t\n"
+	    printf 'Help!\n'
+	    rm -f __conf*
+	    exit 1;
+	fi
+
+	if [ $size = 8 -a $sign = int -a "x$RESULT" = xchar ]; then
+	    RESULT="signed char"
+	fi
+
+	if [ $sign = "uint" ]; then
+	    RESULT="unsigned $RESULT"
+	fi
+
+	echo "typedef $RESULT ${sign}${size}_t;" >> __config.h;
+
+    done
+done
+
+printf 'ok\n'
+
+############################################################
+
+printf "Checking size of off_t... "
+
+cat > __conftest.c <<EOF
+#include <sys/types.h>
+#include <unistd.h>
+#include <stdint.h>
+#include "__config.h"
+int main() {
+    int foo[sizeof(off_t) == sizeof(int64_t) ? 1 : -1];
+    foo[0] = 0;
+    return foo[0];
+}
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "ok\n"
+else
+    if $CC -c -D_FILE_OFFSET_BITS=64 __conftest.c >/dev/null 2>&1; then
+	printf "bogus\n"
+	printf "Your C library requires -D_FILE_OFFSET_BITS=64. Please ask"
+	printf "your vendor to\n provide a reasonable default environment.\n"
+	CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64"
+    else
+	printf "small or unknown\n"
+	printf "WARNING -- large files will probably not work\n"
+	# ...although they mostly don't anyway owing to 32-bit limitations
+	# in the guest environment
+    fi
+fi
+
+############################################################
+
+printf "Checking for struct sockaddr_storage... "
+
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+static struct sockaddr_storage testing;
+char *foo() { return (char *)&testing; }
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "ok\n"
+else
+    printf "missing\n"
+    echo '#include <sys/types.h>' >> __config.h
+    echo '#include <sys/socket.h>' >> __config.h
+    echo 'struct sockaddr_storage { struct sockaddr data; };' >> __config.h
+fi
+
+############################################################
+
+printf "Checking for socklen_t... "
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+int foo() {
+  socklen_t testing;
+  return accept(0, (struct sockaddr *)0, &testing);
+}
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "socklen_t\n"
+else
+    OK=0
+    for TRY in int size_t long unsigned "unsigned long"; do
+	if $CC -D"socklen_t=$TRY" -c __conftest.c >/dev/null 2>&1; then
+	    printf "$TRY\n"
+	    echo "typedef $TRY socklen_t;" >> __config.h
+	    OK=1;
+	    break;
+	fi
+    done
+    if [ $OK != 1 ]; then
+	printf 'missing\n'
+	printf 'Cannot determine type for socklen_t... help!\n'
+	rm -f __conf*
+	exit 1
+    fi
+fi
+
+############################################################
+
+printf "Checking if struct sockaddr_un has sun_len... "
+
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+int foo() {
+    struct sockaddr_un mysun;
+    mysun.sun_len = 6;
+    return mysun.sun_len;
+}
+EOF
+
+if $CC -c __conftest.c >/dev/null 2>&1; then
+    printf "yes\n"
+    echo '#define HAS_SUN_LEN 1' >> __config.h
+else
+    printf "no\n"
+fi
+
+############################################################
+
+printf "Checking for -lsocket..."
+
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+int main() {
+    return socket(0, 0, 0);
+}
+EOF
+
+if $CC __conftest.c -o __conftest >/dev/null 2>&1; then
+    printf 'no\n'
+elif $CC __conftest.c -lsocket -o __conftest >/dev/null 2>&1; then
+    printf 'yes\n'
+    LIBS=`echo "$LIBS -lsocket" | sed 's/^ *//;s/ *$//'`
+else
+    printf 'missing\n'
+    printf 'Cannot find socket()... help!\n'
+    rm -f __conf*
+    exit 1
+fi
+
+############################################################
+
+printf "Checking for -lnsl..."
+
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <netdb.h>
+int main() {
+    struct hostent *hp = gethostbyname("abcdef");
+    return hp->h_length;
+}
+EOF
+
+if $CC __conftest.c -o __conftest >/dev/null 2>&1; then
+    printf 'no\n'
+elif $CC __conftest.c -lnsl -o __conftest >/dev/null 2>&1; then
+    printf 'yes\n'
+    LIBS=`echo "$LIBS -lnsl" | sed 's/^ *//;s/ *$//'`
+else
+    printf 'missing\n'
+    printf 'Cannot find gethostbyname()... help!\n'
+    exit 5
+    rm -f __conf*
+    exit 1
+fi
+
+############################################################
+
+printf "Checking if SUN_LEN is defined... "
+
+cat >__conftest.c <<EOF
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <string.h>
+int foo() {
+    struct sockaddr_un mysun;
+    strcpy(mysun.sun_path, "abc");
+    return SUN_LEN(&mysun);
+}
+
+int main() {
+    return 0;
+}
+EOF
+
+if $CC __conftest.c $LIBS -o __conftest >/dev/null 2>&1; then
+    printf "yes\n"
+else
+    printf "missing\n"
+    echo '#define SUN_LEN(x) '"\\" >>__config.h
+    echo '    (sizeof(*(x)) - sizeof((x)->sun_path) '"\\" >>__config.h
+    echo '     + strlen((x)->sun_path))' >>__config.h
+fi
+
+############################################################
+
+printf "Checking for snprintf... "
+
+cat >__conftest.c <<EOF
+#include <stdio.h>
+#include <string.h>
+int main() {
+    char buf[32];
+    snprintf(buf, 8, "abcdef%s", "ghijkl");
+    if (!strcmp(buf, "abcdefg")) return 0;
+    return 1;
+}
+EOF
+
+OK=0
+if $CC __conftest.c -o __conftest >/dev/null 2>&1; then
+    if ./__conftest >/dev/null 2>&1; then
+	printf 'ok\n'
+	OK=1
+    fi
+fi
+
+if [ $OK = 0 ]; then
+    for TRY in -lsnprintf -ldb; do
+	if $CC __conftest.c $TRY -o __conftest >/dev/null 2>&1; then
+	    if ./__conftest; then
+		printf "$TRY\n"
+		LIBS=`echo "$LIBS $TRY" | sed 's/^ *//;s/ *$//'`
+		OK=1
+		break
+	    fi
+	fi
+     done
+fi
+
+if [ $OK = 0 ]; then
+    printf 'missing\n'
+    printf 'Cannot find snprintf... help!\n'
+    rm -f __conf*
+    exit 1
+fi
+
+############################################################
+
+printf "Install directories:\n"
+
+if [ "x$PREFIX" = x ]; then
+    PREFIX='/usr/local'
+fi
+
+if [ "x$BINDIR" = x ]; then
+    BINDIR="$PREFIX/bin"
+fi
+
+if [ "x$EXAMPLEDIR" = x ]; then
+    EXAMPLEDIR="$PREFIX/share/examples/sys161"
+fi
+
+if [ "x$DOCDIR" = x ]; then
+    DOCDIR="$PREFIX/share/doc/sys161"
+fi
+
+if [ "x$MANDIR" = x ]; then
+    if [ -d "$PREFIX/share/man/man1" ]; then
+	MANDIR="$PREFIX/share/man"
+    else
+	MANDIR="$PREFIX/man"
+    fi
+fi
+
+printf "   $BINDIR\n"
+printf "   $EXAMPLEDIR\n"
+printf "   $DOCDIR\n"
+printf "   $MANDIR\n"
+
+############################################################
+
+printf 'Creating build directories\n'
+
+for d in sys161 trace161 stat161 hub161 disk161 doc man; do
+    [ -d build-$d ] || mkdir build-$d
+done
+
+if [ -d ${SRCDIR}$CPU/tests ]; then
+    [ -d test-cpu ] || mkdir test-cpu
+fi
+
+########################################
+
+printf 'Generating defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    case "$SRCDIR" in
+	"") echo "S=.";;
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > defs.mk
+
+########################################
+
+printf 'Generating build-sys161/defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    echo "CC=$CC"
+    echo "CFLAGS=$CFLAGS $OPT"
+    echo "LDFLAGS=$LDFLAGS"
+    echo "LIBS=$LIBS"
+    echo
+    echo "PROG=sys161"
+    echo
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo "CPU=$CPU"
+    echo
+) > build-sys161/defs.mk
+
+########################################
+
+printf 'Generating build-trace161/defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    echo "CC=$CC"
+    echo "CFLAGS=$CFLAGS $OPT -DUSE_TRACE"
+    echo "LDFLAGS=$LDFLAGS"
+    echo "LIBS=$LIBS"
+    echo
+    echo "PROG=trace161"
+    echo
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo "CPU=$CPU"
+    echo
+) > build-trace161/defs.mk
+
+########################################
+
+printf 'Generating build-stat161/defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    echo "CC=$CC"
+    echo "CFLAGS=$CFLAGS $OPT"
+    echo "LDFLAGS=$LDFLAGS"
+    echo "LIBS=$LIBS"
+    echo
+    echo "PROG=stat161"
+    echo
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > build-stat161/defs.mk
+
+########################################
+
+printf 'Generating build-hub161/defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    echo "CC=$CC"
+    echo "CFLAGS=$CFLAGS $OPT"
+    echo "LDFLAGS=$LDFLAGS"
+    echo "LIBS=$LIBS"
+    echo
+    echo "PROG=hub161"
+    echo
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > build-hub161/defs.mk
+
+########################################
+
+printf 'Generating build-disk161/defs.mk\n'
+
+(
+    echo '# Automatically generated file; do not edit'
+    echo "CC=$CC"
+    echo "CFLAGS=$CFLAGS $OPT"
+    echo "LDFLAGS=$LDFLAGS"
+    echo "LIBS=$LIBS"
+    echo
+    echo "PROG=disk161"
+    echo
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > build-disk161/defs.mk
+
+########################################
+
+printf 'Generating build-doc/defs.mk\n'
+
+(
+    echo "DESTDIR=$DESTDIR"
+    echo "BINDIR=$BINDIR"
+    echo "EXAMPLEDIR=$EXAMPLEDIR"
+    echo "DOCDIR=$DOCDIR"
+    echo "MANDIR=$MANDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > build-doc/defs.mk
+
+########################################
+
+printf 'Generating build-man/defs.mk\n'
+
+(
+    echo "DESTDIR=$DESTDIR"
+    echo "MANDIR=$MANDIR"
+    echo
+    case "$SRCDIR" in
+	/*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	*) echo "S=../$SRCDIR" | sed 's,/$,,';;
+    esac
+    echo
+) > build-man/defs.mk
+
+########################################
+
+if [ -d ${SRCDIR}$CPU/tests ]; then
+    printf 'Generating test-cpu/defs.mk\n'
+
+    (
+	case "$SRCDIR" in
+	    /*) echo "S=$SRCDIR" | sed 's,/$,,';;
+	    *) echo "S=../$SRCDIR" | sed 's,/$,,';;
+	esac
+	echo "CPU=$CPU"
+	echo
+    ) > test-cpu/defs.mk
+fi
+
+########################################
+
+printf 'Generating Makefiles\n'
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/$(CPU)/cpu.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/sys161.mk'
+) > build-sys161/Makefile
+
+cp -f build-sys161/Makefile build-trace161/Makefile
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/stat161.mk'
+) > build-stat161/Makefile
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/hub161.mk'
+) > build-hub161/Makefile
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/disk161.mk'
+) > build-disk161/Makefile
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/doc.mk'
+) > build-doc/Makefile
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/version.mk'
+    echo 'include $S/mk/man.mk'
+) > build-man/Makefile
+
+if [ -d ${SRCDIR}$CPU/tests ]; then
+    (
+	echo '# Automatically generated file - do not edit here'
+	echo 'include defs.mk'
+	echo 'include $S/version.mk'
+	echo 'include $S/$(CPU)/tests/test.mk'
+    ) > test-cpu/Makefile
+fi
+
+(
+    echo '# Automatically generated file - do not edit here'
+    echo 'include defs.mk'
+    echo 'include $S/mk/top.mk'
+) > Makefile
+
+########################################
+
+printf 'Generating config.h\n'
+
+cp -f __config.h build-sys161/config.h
+cp -f __config.h build-trace161/config.h
+cp -f __config.h build-stat161/config.h
+cp -f __config.h build-hub161/config.h
+cp -f __config.h build-disk161/config.h
+
+rm -f __conf*
+
+########################################
+
+printf 'Generating cpu-elf.h\n'
+
+(
+    echo '/* Automatically generated file - do not edit here */'
+    cat ${SRCDIR}$CPU/cpu-elf.h
+) > build-sys161/cpu-elf.h
+
+cp -f build-sys161/cpu-elf.h build-trace161/cpu-elf.h
+
+########################################
+
+printf 'Generating make rules\n'
+
+(
+    cd build-sys161 && touch depend.mk rules.mk && make rules
+)
+(
+    cd build-trace161 && touch depend.mk rules.mk && make rules
+)
+(
+    cd build-stat161 && touch depend.mk rules.mk && make rules
+)
+(
+    cd build-hub161 && touch depend.mk rules.mk && make rules
+)
+(
+    cd build-disk161 && touch depend.mk rules.mk && make rules
+)
+
+if [ -d test-cpu ]; then
+    (
+	cd test-cpu && touch depend.mk rules.mk && make rules
+    )
+fi
+
+########################################
+
+printf 'Now do make && make install\n'
+
+exit 0

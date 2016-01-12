@@ -1,0 +1,288 @@
+<html>
+<head>
+<title>System/161 Installation</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+Getting and Installing System/161
+</font></h2>
+
+<p>
+Note that if you are taking a course using System/161, chances are
+that your course staff has already installed it for you.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Getting System/161</font></h3>
+
+<p>
+Download URLs:
+<blockquote>
+<A HREF=http://os161.eecs.harvard.edu/download/>http://os161.eecs.harvard.edu/download/</A>
+(long-term address not yet operational)
+<br>
+<A HREF=http://www.eecs.harvard.edu/~dholland/os161/download/>http://www.eecs.harvard.edu/~dholland/os161/download/</A>
+(current as of this writing)
+</blockquote>
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Supported Platforms</font></h3>
+
+<p>
+Actively maintained/tested host systems:
+<ul>
+<li> Linux
+<li> NetBSD
+<li> Solaris
+</ul>
+Other supported host systems:
+<ul>
+<li> Digital Unix
+<li> DragonflyBSD
+<li> FreeBSD
+<li> MacOS X
+<li> OpenBSD
+</ul>
+Other Unixes should work. You may need to use GNU make (or BSD make)
+on some. Windows is not supported; it might work with Cygwin or MinGW
+or the like, maybe. (I'll take noninvasive patches, but I won't
+maintain them.)
+</p>
+
+<p>
+Supported host CPU types:
+<ul>
+<li> any.
+</ul>
+System/161 should be runnable on any remotely sane CPU and is known to
+be 64-bit clean.
+</p>
+
+<p>
+Supported host compilers:
+<ul>
+<li> gcc 4.0 through 4.8
+<li> clang
+</ul>
+gcc 4.9 might work or might require minor patches for a clean build.
+Older gcc probably still works. There also is explicit support for the
+DEC compiler for alpha on Digital Unix (aka Compaq Tru64) but it
+hasn't been tried in a long time. I have no data whatsoever on Sun's
+compilers.
+</p>
+
+<p>
+Supported <em>guest</em> compilers:
+<ul>
+<li> It should be possible (with some caution) to use any compiler
+that targets 32-bit MIPS CPUs.
+<li> The processor regression tests use the OS/161 cross-compiler
+toolchain.
+</ul>
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Installation (Unix
+sysadmins and developers)</font></h3>
+
+<p>
+Short installation directions for Unix sysadmins: untar,
+<tt>configure --help</tt>, <tt>configure</tt>, <tt>make</tt>,
+<tt>make install</tt>.
+As of version 1.15 System/161 configures with <tt>--prefix</tt> and
+installs in the normal layout.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Installation (everyone
+else)</font></h3>
+
+<p>
+Assuming you downloaded version 2.0, unpack the distribution file by
+typing
+<pre>
+	tar -xvzf sys161-2.0.tar.gz
+</pre>
+This will create a subdirectory called <tt>sys161-2.0</tt> with the
+distribution files in it. Go into this directory by typing
+<pre>
+	cd sys161-2.0
+</pre>
+and run the configure script. These are the configuration options:
+
+<table width="100%">
+<tr>
+<th rowspan=9 width="5%">&nbsp;</th>
+<th>Option</th><th>Description</th><th>Default</th>
+</tr>
+
+<tr>
+<td><tt>--with-compiler=CC</tt></td><td>Use CC as compiler</td><td>(probed)</td>
+</tr><tr>
+<td><tt>--prefix=DIR</tt></td><td>Install under DIR</td><td><tt>/usr/local</tt></td>
+</tr><tr>
+<td><tt>--bindir=DIR</tt></td><td>Install programs into DIR</td><td>PREFIX/bin</td>
+</tr><tr>
+<td><tt>--exampledir=DIR</tt></td><td>Install examples in DIR</td><td>PREFIX/share/examples/sys161</td>
+</tr><tr>
+<td><tt>--docdir=DIR</tt></td><td>Install docs into DIR</td><td>[PREFIX/share/doc/sys161</td>
+</tr><tr>
+<td><tt>--mandir=DIR</tt></td><td>Install man pages into DIR</td><td>PREFIX/man</td>
+</tr><tr>
+<td><tt>--devel</tt></td><td>Developer mode</td><td>off</td>
+</tr><tr>
+<td><tt>--debug</tt></td><td>Turn on debug symbols for sys161 itself</td><td>off</td>
+</tr>
+</table>
+The configure script requires one additional argument: the processor
+type. For now there is only one processor supported,
+<tt>mipseb</tt>, so always supply that.
+</p>
+
+<p>
+Thus to configure to install in your home directory you might do
+<pre>
+	./configure --prefix=$HOME/sys161 mipseb
+</pre>
+Note that, because of the way the Unix shell handles ~, if you use
+<tt>~/sys161</tt> instead of <tt>$HOME/sys161</tt> it won't work.
+</p>
+
+Now compile and install by typing
+<pre>
+	make
+</pre>
+then
+<pre>
+	make install
+</pre>
+</p>
+
+<p>
+If the compilation fails, please file a bug report.
+</p>
+
+<p>
+If you get errors caused by make, such as
+<pre>
+	make: Missing separator
+</pre>
+or
+<pre>
+	gcc: No input files
+</pre>
+try using GNU make (or BSD make). There are a number of dialects of
+the old AT&T make around, and some of them do not work very well.
+Very old versions of BSD make may also have problems.
+</p>
+
+
+
+This compiles and installs two versions of the simulator:
+<tt>sys161</tt>, the normal or "fast" simulator, <tt>trace161</tt>,
+which is the same as <tt>sys161</tt> but has lots of debugging and
+diagnostic support built in and thus doesn't run as quickly.
+It also installs three support programs: <tt>hub161</tt>, a tool for
+connecting multiple copies of System/161 together into a virtual
+network, <tt>stat161</tt>, a tool for printing the internal
+performance counters, and <tt>disk161</tt>, a tool for manipulating
+disk images. See below for more information.
+
+
+<h3><font face=tahoma,arial,helvetica,sans>What's Installed</font></h3>
+
+<p>
+Assuming the default installation directories, and version 2.0,
+System/161 installs the following:
+<dl>
+<dt><tt><font color=#000066>/usr/local/bin/sys161-2.0</font></tt></dt>
+<dd>The fast version of the simulator.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/trace161-2.0</font></tt></dt>
+<dd>A slower version of the simulator with tracing and profiling support.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/stat161-2.0</font></tt></dt>
+<dd>A tool for monitoring the simulator.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/hub161-2.0</font></tt></dt>
+<dd>A tool for linking multiple copies of System/161 together to form
+a virtual network.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/disk161-2.0</font></tt></dt>
+<dd>A tool for manipulation disk images.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/sys161</font></tt></dt>
+<dd>Symbolic link to the last installed sys161 version.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/trace161</font></tt></dt>
+<dd>Symbolic link to the last installed trace161 version.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/stat161</font></tt></dt>
+<dd>Symbolic link to the last installed stat161 version.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/hub161</font></tt></dt>
+<dd>Symbolic link to the last installed hub161 version.</dd>
+<dt><tt><font color=#000066>/usr/local/bin/disk161</font></tt></dt>
+<dd>Symbolic link to the last installed disk161 version.</dd>
+<dt><tt><font color=#000066>/usr/local/share/examples/sys161/</font></tt></dt>
+<dd>Directory containing example config files.</dd>
+<dt><tt><font color=#000066>/usr/local/share/doc/sys161/</font></tt></dt>
+<dd>Directory containing this documentation.</dd>
+</dl>
+</p>
+
+<!-- (Not complete enough to be useful...)
+
+<h3><font face=tahoma,arial,helvetica,sans>Platform Test Data</font></h3>
+
+<p>
+These OS versions and processor types were found to have worked on the
+date listed.
+This information is probably not very up to date.
+
+<table width="100%">
+<tr>
+<th>OS</th><th>OS Version</th><th>CPU</th><th>OS/161 Version</th><th>Date</th>
+<th>Notes</th>
+</tr>
+
+<tr>
+<td>AIX</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Digital Unix</td><td>4.x</td><td>alpha</td><td>1.12</td><td>5/2004</td>
+</tr><tr>
+<td>DragonflyBSD</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>FreeBSD</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>HP/UX</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Irix</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Linux (CentOS)</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Linux (Debian)</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Linux (Fedora)</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Linux (Gentoo)</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Linux (Ubuntu)</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>MacOS</td><td>10.2?</td><td>?</td><td>?</td><td>2002?</td>
+</tr><tr>
+<td>NetBSD</td><td>5.99</td><td>amd64</td><td>1.15</td><td>?</td>
+</tr><tr>
+<td>NetBSD</td><td>5.99</td><td>i386</td><td>1.15</td><td>1/2009</td>
+</tr><tr>
+<td>NetBSD</td><td>5.0</td><td>i386</td><td>1.14</td><td>10/2008</td>
+</tr><tr>
+<td>NetBSD</td><td>4.0</td><td>i386</td><td>1.13</td><td>~2007</td>
+</tr><tr>
+<td>NetBSD</td><td>3.1</td><td>i386</td><td>?</td><td>?</td>
+</tr><tr>
+<td>OpenBSD</td><td>?</td><td>?</td><td>?</td><td>?</td>
+</tr><tr>
+<td>Solaris</td><td>?</td><td>?</td><td>?</td><td>2007?</td>
+</tr>
+
+</table>
+
+-->
+
+
+</body>
+</html>

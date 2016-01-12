@@ -1,0 +1,65 @@
+System/161 metering protocol
+
+
+This is simple. Very simple.
+
+The protocol is a line-oriented ascii protocol passing over a stream
+socket. (The socket is .sockets/meter under the directory sys161 is
+running in.)
+
+Lines are terminated with both carriage return and linefeed, though a
+client should be prepared to handle lines with the carriage return
+missing.
+
+The protocol is not case-sensitive.
+
+Nothing is sent from the client to System/161; the clients are
+read-only.
+
+The following messages are defined:
+
+   ERROR [optional error text]	
+   HELLO version
+   HEAD [word]...
+   WIDTH [number]...
+   DATA [number]...
+
+The ERROR message indicates that something is wrong on System/161's
+end. The connection is then terminated.
+
+HELLO is issued to new clients upon connection. The version number is
+a single integer. If the version is not one the client is prepared to
+handle, it should disconnect. The version described in this file is
+"1".
+
+HEAD is sent upon connection, after HELLO. It contains a short
+identifying string for each statistic reported by System/161. These
+strings are alphanumeric text and contain no spaces or punctuation.
+
+WIDTH is sent following HEAD. For each column, it reports a suggested
+field width for printing.
+
+DATA is sent at regular intervals (presently every 0.2 seconds) in
+simulator time. The DATA line represents a row of data, and each
+number is one field. (The strings sent by the HEAD message identify
+the fields.) Note that some of the data will require 64-bit integers
+to process fully.
+
+For obvious reasons the number of fields in the HEAD, WIDTH, and DATA
+messages must be consistent with one another.
+
+The values sent are cumulative since simulator startup.
+
+The fields and their meanings are not defined as part of the protocol.
+However, these are the fields sent by sys161 as of this writing:
+
+	kern		Processor cycles in kernel mode.
+	user		Processor cycles in user mode.
+	idle		Processor cycles in idle mode.
+	irqs		Interrupt count.
+	exns		Exception count.
+	disk		Disk I/O block count (all disks combined).
+	con		Console I/O character count.
+	emu		Emufs device operations count.
+	net		Network I/O packet count.
+

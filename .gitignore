@@ -1,0 +1,5 @@
+*~
+Makefile
+/build-*
+defs.mk
+/test-cpu

@@ -1,0 +1,92 @@
+<html>
+<head>
+<title>Kernel Debugging with gdb</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+Kernel Profiling
+</font></h2>
+
+<p>
+System/161 has the ability to collect kernel execution profiles for
+offline analysis, e.g. with <tt>gprof</tt>.
+This is transparent (does not require compiling the kernel with -pg)
+and independent of the kernel's own execution.
+</p>
+
+<h3>Basic usage</h3>
+<p>
+Profiling support is one of the "slow" features available only when
+running <tt>trace161</tt>.
+The <em>-P</em> command-line option enables profile collection; when
+System/161 shuts down the profile data is written to the file
+<tt>gmon.out</tt>.
+To collect and analyze a basic profile:
+<pre>
+	trace161 -P kernel
+	gprof kernel | less
+</pre>
+This much is sufficient for many purposes.
+</p>
+
+<h3>Profiling control</h3>
+<p>
+The <A HREF=devices.html#trace>trace control device</A> contains two
+registers that can be used to manipulate the profiler.
+If your kernel has a driver for this device, it can turn profile
+collection on and off dynamically and, when desired, clear the
+accumulating profile data.
+This can be used to e.g. exclude bootup activities from a profile, to
+profile single workloads, or for certain more advanced techniques.
+</p>
+
+<p>
+If you have a contended lock, you can get a profile of what happens
+while that lock is held by enabling profile collection when the lock
+is acquired and disabling it again when the lock is released.
+The resulting profile will contain sampling data and call graph data
+only for code reached while the lock is held; this can often pinpoint
+problems that are invisible in a full profile.
+</p>
+
+<p>
+Similarly, if you find your interrupt response latencies are too high,
+you can profile what happens with interrupts disabled by turning
+profile collection on and off in the code that manipulates the
+interrupt state.
+</p>
+
+<p>
+Finally, you can profile the execution of background threads (syncers,
+pagers, reapers, etc.) by having the thread switch code enable
+profiling when the target thread is running.
+</p>
+
+<h3>Numerical considerations</h3>
+<p>
+The statistical profiler samples at 1000 Hz.
+(This frequency can be cranked up further if necessary by changing
+PROFILE_NSECS in speed.h and recompiling System/161.)
+The sampling bins are 16 bytes wide; on MIPS this is only four
+instructions.
+As a result of these considerations the profiling results are
+considerably more precise than gprof believes by default; it is
+usually reasonable to increase the number of figures in the gprof
+output.
+Unfortunately, only some versions of gprof seem to support this.
+</p>
+
+<h3>Important restriction</h3>
+<p>
+Currently the sampling profiler samples only from CPU 0.
+Code running on other CPUs is not sampled.
+This bug does not apply to the call graph and call counting
+data; even so, for best results configure only one CPU when profiling.
+</p>
+
+</body>
+</html>

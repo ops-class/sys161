@@ -1,0 +1,377 @@
+<html>
+<head>
+<title>System/161 Virtual Hardware</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+System/161 Virtual Hardware
+</font></h2>
+
+<p>
+System/161 is a machine simulator. The virtual machine it simulates is
+a server-class computer, with a serial console, multiple CPUS,
+multiple disks, and one or more network interfaces. The formal
+processor clock speed is 25 MHz, the speed of a high-end server circa
+about 1990. This speed is a tradeoff between genuine processor speeds
+and the speed the simulator code can manage in real time, which is
+markedly lower.
+</p>
+
+<p>
+The virtual machine is constructed in as simple a fashion as is
+reasonably possible while still maintaining most of the feel of real
+hardware. (The part of dealing with real hardware you miss out on is
+the part where the interfaces are screwy and the devices don't work
+half the time.)
+</p>
+
+<p>
+The machine has 32 slots in a passive backplane bus called LAMEbus.
+One slot contains the system board with the LAMEbus bus controller.
+This board may contain up to 32 CPUs, each of which may potentially
+contain multiple cores.
+Each additional slot may be configured with any of several hardware
+devices. This configuration is established using a config file, named
+by default <tt>sys161.conf</tt>. Future versions of System/161 may
+provide a user interface for device configuration and/or allow devices
+to be inserted and removed on the fly ("hotplugged"), but this is not
+currently supported.
+</p>
+
+<p>
+<A HREF=lamebus.html>Programming information for LAMEbus</A>
+</p>
+
+<p>
+The system board contains up to 32 simulated 32-bit MIPS
+microprocessors.
+The MIPS is the simplest "real" 32-bit processor for which development
+tools are readily available; furthermore, the MIPS architecture is
+already widely used for teaching in various contexts. This makes it a
+natural choice.
+</p>
+
+<p>
+<A HREF=mips.html>Programming information for the System/161 MIPS processor</A>
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Config File Syntax</font></h3>
+
+<p>
+By default the config file is named <tt>sys161.conf</tt> and read from
+the current directory. An alternate file can be used by specifying the
+<em>-c</em> option. The syntax is line-oriented, with <tt>#</tt>
+comments. Each line specifies the contents of a slot, which may be
+between 0 and 31, and includes optional configuration arguments for
+the device to be inserted. The format of a configuration line is as
+follows:
+<blockquote>
+<em>slot-number</em> <em>device-name</em> [<em>args</em>...]
+</blockquote>
+The system board (bus controller) must always be placed in slot 31.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Devices</font></h3>
+
+
+The devices available, and the arguments they support, are:
+<table width=100%>
+<td width=5%>&nbsp;</td><td>
+
+<table width=100%>
+
+<tr><td width="3%"></td><td></td><td width="5%"></td><td></td></tr>
+
+<tr>
+<td colspan=2><tt>busctl</tt></td>
+<td colspan=2>Alias for <tt>oldmainboard</tt>.</td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2><tt>disk</tt></td>
+<td colspan=2>Basic disk device</td>
+</tr>
+<tr>
+<td width="3%" rowspan=5>&nbsp;</td>
+<td colspan=2 valign=top><tt>rpm=</tt><em>cycles</em></td>
+<td>Specify rotation speed. Must be multiple of 60. Default is 3600.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>sectors=</tt><em>sectors</em></td>
+<td>Specify number of 512-byte sectors on disk. Provided for
+compatibility with old configurations; ordinarily the size of the disk
+image is used.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>file=</tt><em>filename</em></td>
+<td>Filename to use for disk storage. Required.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>paranoid</tt></td>
+<td>If set, call fsync() on every disk write to hopefully ensure data
+is not lost if the host system crashes. Slow and not recommended for
+normal operation.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>nodoom</tt></td>
+<td>If set, writes to this disk do not invoke the doom counter.
+Useful for swap disks.</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#disk>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>emufs</td>
+<td colspan=2>Emulator pass-through filesystem</A></td>
+</tr>
+<tr>
+<td width="3%" rowspan=2>&nbsp;</td>
+<td colspan=2 valign=top><tt>dir=</tt><em>directory</em></td>
+<td>Directory to use as root of emufs filesystem. Default is
+System/161's current directory. The implementation translates symbolic
+links found in the host filesystem to regular files or directories,
+and no attempt is made to prevent accesses from escaping outside the
+named subtree. This allows the emufs tree to be populated with
+symbolic links that point elsewhere.</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#emufs>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2><tt>mainboard</tt></td>
+<td colspan=2>Multiprocessor system board and LAMEbus bus controller</A></td>
+</tr>
+<tr>
+<td width="3%" rowspan=4>&nbsp;</td>
+<td colspan=2 valign=top><tt>cpus=</tt><em>num</em></td>
+<td>Specify number of CPUs, up to 32. Default is 1.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>cores=</tt><em>bytes</em></td>
+<td>Specify number of cores per CPU, currently limited to 1. Default
+is 1.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>ramsize=</tt><em>bytes</em></td>
+<td>Specify size of physical RAM, up to 16 MB. Must be multiple of CPU
+page size, usually 4K. Required.</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=lamebus.html#controller>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>nic</td>
+<td colspan=2>Network interface</td>
+</tr>
+<tr>
+<td width="3%" rowspan=3>&nbsp;</td>
+<td colspan=2 valign=top><tt>hwaddr=</tt><em>addr</em></td>
+<td>Set the hardware address for this network card. The hardware
+address is a 16-bit integer. 0 and 65535 (0xffff) are reserved for
+special purposes. Required.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>hub=</tt><em>path</em></td>
+<td>Set the path to the socket for the network hub, 
+<A HREF=networking.html><tt>hub161</tt></A>.
+The default is <tt>.sockets/hub</tt>.</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#nic>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2><tt>oldmainboard</tt></td>
+<td colspan=2>Old (uniprocessor only) system board and LAMEbus bus
+controller</A></td>
+</tr>
+<tr>
+<td width="3%" rowspan=3>&nbsp;</td>
+<td colspan=2 valign=top><tt>ramsize=</tt><em>bytes</em></td>
+<td>Specify size of physical RAM, up to 16 MB. Must be multiple of CPU
+page size, usually 4K. Required.</td>
+</tr>
+<tr>
+<td colspan=3>Note: this device is backwards-compatible with
+the System/161 1.x "busctl" device and should be able to run all old
+kernels.
+</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=lamebus.html#oldcontroller>Programming
+information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>random</td>
+<td colspan=2>Random number generator</td>
+</tr>
+<tr>
+<td width="3%" rowspan=4>&nbsp;</td>
+<td colspan=2 valign=top><tt>seed=</tt><em>number</em></td>
+<td>Set seed for pseudo-random number generator. Default is 0.</td>
+</tr>
+<tr>
+<td colspan=2 valign=top><tt>autoseed</tt></td>
+<td>Set seed for pseudo-random number generator based on the system clock.</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td colspan=3>Note: if you have multiple random devices, they all
+share the same randomizer state.</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#rand>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>screen</td>
+<td colspan=2>Full-screen text console</td>
+</tr>
+<tr>
+<td width="3%" rowspan=3>&nbsp;</td>
+<td colspan=3><em>(no arguments)</td>
+</tr>
+<tr><td colspan=3>Note: not implemented yet.</td></tr>
+<tr>
+<td colspan=3><A HREF=devices.html#screen>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>serial</td>
+<td colspan=2>Serial console</td>
+</tr>
+<tr>
+<td width="3%" rowspan=2>&nbsp;</td>
+<td colspan=3><em>(no arguments)</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#serial>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>timer</td>
+<td colspan=2>Basic timer device</A></td>
+</tr>
+<tr>
+<td width="3%" rowspan=2>&nbsp;</td>
+<td colspan=3><em>(no arguments)</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#timer>Programming information</A></td>
+</tr>
+
+<tr><td colspan=4>&nbsp;</td></tr>
+
+<tr>
+<td colspan=2>trace</td>
+<td colspan=2>System/161 trace controller</td>
+</tr>
+<tr>
+<td width="3%" rowspan=2>&nbsp;</td>
+<td colspan=3><em>(no arguments)</td>
+</tr>
+<tr>
+<td colspan=3><A HREF=devices.html#trace>Programming information</A></td>
+</tr>
+
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+
+<h3><font face=tahoma,arial,helvetica,sans>Timing</font></h3>
+<p>
+System/161 maintains timings internally at a granularity of a single
+clock cycle; thus it can be used for very accurate profiling, to the
+extent that its execution time model is realistic.
+</p>
+
+<p>
+The timings in System/161 have the following known limitations:
+<ul>
+<li> System/161 does not implement a cache simulator. All accesses are
+     assumed to be satisfiable in one cycle from main memory. This is
+     not completely crazy for a 25MHz cycle time; however, as cache
+     effects are very important for performance today, it is
+     displeasing. Future releases of System/161 may include more cache
+     modeling.
+<li> All instructions execute in one cycle. This is the intent of the
+     MIPS architecture for most ordinary integer instructions;
+     however, it should not be true for e.g. multiplies and divides.
+<li> The disk timing model is weird and broken. Sometime it should be
+     replaced with either a real one or at least a better one.
+<li> The serial console was originally supposed to be 9600 bps; then
+     it got cranked up to 19200 bps, and then a substantial fudge
+     factor got inserted to make it go faster. At one time on one
+     (old and slow) machine this made the output scroll at a speed
+     comparable to a real 19200 bps connection. It hasn't been retuned
+     since. This doesn't matter that much, but it's not actually the
+     right speed for a serial console.
+</ul>
+</p>
+
+<p>
+There is also the issue that System/161 cannot actually execute 25
+million instructions a second, even on a fast machine. Therefore, on
+CPU-intensive tasks, it falls behind. In order to maintain the
+illusion that it continues to run at 25MHz, it distinguishes virtual
+time (within the simulation) from wall time (outside the simulation).
+All internal timings are calculated in virtual time.
+</p>
+
+<p>
+Wall time is of interest, however, because the <em>interactive</em>
+behavior of the system occurs in wall time. For this reason,
+System/161 attempts to sync itself to wall time. For I/O-intensive
+tasks its interactive behavior is time-correct; for CPU-intensive
+tasks it is very slow.  In the transition from one to the other some
+odd artifacts can occur; these can be made odder yet by scheduling
+interactions with the host OS if running on a busy system. These are
+most noticeable on the system console, but can also occur if one is
+using the virtual network.
+</p>
+
+<p>
+For this reason, it's important to be cautious about evaluating
+software performance by eyeball; appearances can be quite
+misleading. Use the internal timers. If there's something you need to
+do that the internal timers can't support, please file a bug report.
+</p>
+
+<p>
+Currently, when multiple CPUs are configured, they execute in lockstep
+in a single host-level thread, and the timing model is unchanged. It
+is likely in the future that it will become possible to run each
+virtual CPU on its own host-level thread; this will add major
+complications to the timing model, the full ramifications of which are
+not yet completely clear.
+</p>
+
+</body>
+</html>

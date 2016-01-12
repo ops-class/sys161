@@ -1,0 +1,243 @@
+<html>
+<head>
+<title>System/161</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<center>
+<p align=center>
+<font face=tahoma,arial,helvetica,sans>
+
+<font size=+2 color=#000066><b>
+System/161 2.x Software and Hardware Manual
+</b></font>
+
+<br><br>
+
+<font size=+1 color=#36648b>
+David A. Holland
+<br>
+July 6, 2015
+</font>
+
+</font>
+</p>
+</center>
+
+<p align=right><i>
+<font face=tahoma,arial,helvetica,sans>
+<A HREF=copying.txt>Copyright</A> 2000, 2001, 2002, 2009, 2010, 2014
+<br>
+The President and Fellows of Harvard College.
+</font>
+</i></p>
+
+<hr>
+
+<h3><font face=tahoma,arial,helvetica,sans>Introduction & Contents</font></h3>
+
+<p>
+System/161 is a synthetic (read: made up) hardware platform designed
+specifically for teaching operating systems and for experimental
+operating system hacking. It includes a simulated CPU, system bus, and
+bus devices that are realistic but simple and easy to work with.
+</p>
+
+<p>
+New in System/161 2.x: support for multiprocessor and multicore
+system configurations.
+</p>
+
+The rest of this manual is divided into the following subsections:
+<ul>
+<li> <A HREF=install.html>Getting and Installing System/161</A>
+<li> <A HREF=system.html>System/161 Virtual Hardware</A>
+<li> <A HREF=#running>Running System/161</A> (below)
+<li> <A HREF=#disks>Manipulating disk images</A> (below)
+<li> <A HREF=gdb.html>Remote debugging with <tt>gdb</tt></A>
+<li> <A HREF=networking.html>Network connectivity with <tt>hub161</tt></A>
+<li> <A HREF=prof.html>Kernel profiling</A>
+<li> Programming specs:
+		<A HREF=mips.html>MIPS processor</A>
+		<A HREF=lamebus.html>LAMEbus</A>
+		<A HREF=devices.html>Hardware devices</A>
+</ul>
+
+<hr>
+<A NAME=running>
+
+<h3><font face=tahoma,arial,helvetica,sans>Running System/161</font></h3>
+
+<p>
+There are two versions of System/161 that are built and installed: the
+normal one, <tt>sys161</tt>, and one compiled to be able to log
+information about what's happening and generally assist debugging,
+which is called <tt>trace161</tt>.
+</p>
+
+<p>
+The general format for the command line for either of these is like
+this:
+<blockquote>
+	<tt>sys161</tt> [ <em>System/161 options</em> ] 
+		<em>kernel</em> [ <em>kernel options</em> ]
+</blockquote>
+</p>
+
+<p>
+The <em>System/161 options</em> are:
+<blockquote>
+<dl>
+
+<dt>-c <em>configfile</em></dt>
+<dd>Specify alternate config file. Default is <tt>sys161.conf</tt>.</dd>
+
+<dt>-D <em>count</em></dt>
+<dd>Enable the doom counter. After the specified number of disk
+writes, the machine halts abruptly. (This is useful for testing file
+systems.) Individual disks can be marked "nodoom" in the config file,
+in which case writes to those disks do not count. (This is useful for
+your swap disk.)</dd>
+
+<dt>-p <em>port</em></dt>
+<dd>Listen for debugger connections on specified TCP port. The default
+is to use the Unix-domain socket <tt>./.sockets/gdb</tt> for debugger
+connections.
+<br><font size=-1><strong>Note: because the remote gdb protocol
+does not support authentication, use this option only with
+caution.</strong></font></dd>
+
+<dt>-s</dt>
+<dd>Pass signal-generating characters (^C, ^Z, etc.) through to the
+running kernel instead of treating them as requests to sys161.</dd>
+
+<dt>-w</dt>
+<dd>Wait for a debugger connection immediately on startup.</dd>
+
+<dt>-X</dt>
+<dd>Do not hang waiting for the debugger; exit instead.</dd>
+
+<dt>-Z secs</dt>
+<dd>Check for progress and first warn, then drop to the debugger if no
+progress occurs in the specified amount of simulator time. Progress is
+defined as successfully retiring an instruction in user mode. Don't
+use this option with in-kernel test workloads.</dd>
+
+</dl>
+</blockquote>
+</p>
+
+<p>
+The following additional options control trace161's tracing and are
+ignored by sys161:
+<blockquote>
+<dl>
+
+<dt>-f <em>tracefile</em></dt>
+<dd>Set the file trace information is logged to. By default, stderr is
+used. Specifying -f- sends output to stdout instead of stderr.</dd>
+
+<dt>-t <em>traceflags</em></dt>
+<dd>Tell System/161 what to trace. The following flags are available:
+   <table>
+   <tr><td>d</td>	<td>Trace disk I/O</td></tr>
+   <tr><td>e</td>	<td>Trace emufs I/O</td></tr>
+   <tr><td>j</td>	<td>Trace jumps and branches</td></tr>
+   <tr><td>k</td>	<td>Trace instructions in kernel mode</td></tr>
+   <tr><td>n</td>	<td>Trace network I/O</td></tr>
+   <tr><td>t</td>	<td>Trace TLB/MMU activity</td></tr>
+   <tr><td>u</td>	<td>Trace instructions in user mode</td></tr>
+   <tr><td>x</td>	<td>Trace exceptions</td></tr>
+   </table>
+   Caution: tracing instructions generates huge amounts of output
+   that may overwhelm smaller host systems.
+</dd>
+
+</dl>
+</blockquote>
+</p>
+
+<p>
+The following option is also only available in trace161:
+<blockquote>
+<dl>
+
+<dt>-P</dt>
+<dd>Collect a kernel profile and leave it in the file
+<tt>gmon.out</tt> for analysis by <tt>gprof</tt>.</dd>
+
+</dl>
+</blockquote>
+</p>
+
+<p>
+The <em>kernel</em> is an operating system kernel to load and run. It
+should be an ELF-format executable for the same processor type as
+System/161 is compiled to support. For further information, see below.
+</p>
+
+<p>
+Note that options found after the kernel name will be passed to the
+kernel and not interpreted by System/161.
+</p>
+
+<A NAME=disks>
+
+<h3><font face=tahoma,arial,helvetica,sans>Manipulating disk images</font></h3>
+
+<p>
+The <tt>disk161</tt> tool can be used to manipulate disk images.
+It supports three actions: <tt>create</tt>, to create a new disk
+image; <tt>info</tt>, to print image information; and <tt>resize</tt>,
+to change the size of an image.
+</p>
+
+<p>
+<b>Create.</b> Create a disk image like this:
+<pre>
+   disk161 create LHD0.img 5M
+</pre>
+This creates an image called <tt>LHD0.img</tt> capable of holding 5
+megabytes of data.
+The size is given in bytes, but as above can given one of the suffixes
+<tt>G</tt>, <tt>M</tt>, <tt>K</tt>, or <tt>s</tt> for gigabytes,
+megabytes, kilobytes, sectors (512-byte units) respectively.
+The size must be a unit number of sectors.
+</p>
+
+<p>
+<b>Info.</b> After creating <tt>LHD0.img</tt> as above,
+<pre>
+   disk161 info LHD0.img
+</pre>
+prints
+<pre>
+   LHD0.img size 5242880 bytes (10240 sectors; 5120K; 5M)
+   LHD0.img spaceused 8192 bytes (16 sectors; 8K; 0M)
+</pre>
+meaning that the image holds up to 5M, but is currently only using 8K.
+(This is because the image is a sparse file by default; it only uses
+space for regions that have had data written to them.
+The only thing in a new image is the image header block, which is one
+sector rather than 8K; but here 8K is the host file system's block
+size.)
+</p>
+
+<p>
+<b>Resize.</b> Change the size of a disk image like this:
+<pre>
+   disk161 resize LHD0.img 10M
+</pre>
+which makes the image twice as big as before.
+You can also use + or - on the size argument to expand or shrink the
+image by a specified amount.
+Note that resizing the image will not resize any file system or other
+logical structure that may be stored on it.
+That must be done separately with other tools.
+Shrinking an image without doing this will destroy data.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+The tests are named according to the following pattern. 
+
+They are all in the form tX-INSN[-stuff], where X is one of the
+letters in the following table and INSN is the name of the primary
+instruction being tested.
+
+a-arithmetic:	add addi sub addu addiu subu
+b-bitwise:	and andi nor or ori xor xori
+c-compare:	slt slti sltu sltiu
+d-divide:	div divu
+j-jump:		beq bgez bgezal bgtz blez bltz bltzal bne jr jal jalr
+m-multiply:	mult multu
+o-other:	break lui mfhi mflo mthi mtlo rfe syscall
+p-coprocessor:	bczf bczt cfcz copz ctcz lwcz mfcz mtcz swcz
+r-readmem:	lb lbu lh lhu lw lwl lwr
+s-shift:	sll sllv sra srav srl srlv
+t-tlb:		tlbp tlbr tlbwi tlbwr
+w-writemem:	sb sh sw swl swr
+z-special:	various handwritten tests
+
+As you may notice, less than half of the tests that one would actually
+desire are actually implemented.
+
+To run the tests you have to have the OS/161 toolchain
+(mips-harvard-os161-gcc, etc.) on your path.
+
+(The tests are all assembler, but cpp is used for preprocessing, so
+both gcc and binutils are required.)
+

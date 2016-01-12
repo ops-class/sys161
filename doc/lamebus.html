@@ -1,0 +1,658 @@
+<html>
+<head>
+<title>Linear Always-Mapped Extents</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+Linear Always-Mapped Extents
+</font></h2>
+
+<p>
+LAMEbus is a simple no-fuss system bus architecture. There are 32
+slots, each of which is associated with a fixed-size addressable
+region. These regions are mapped in order into the system physical
+memory space. There is no DMA; data transfers are done by the CPU
+using transfer buffers appearing within a device's address space.
+(However, DMA may be added in a future version.)
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Structure of the Bus
+Region</font></h3>
+
+<p>
+There are 32 slots, and each slot has a 64K address space. Thus, the
+whole bus region takes 64K*32 = 2MB. The base physical address of this
+region is called LAMEBASE; because different processor types impose
+different restrictions on the organization of physical memory, its
+value depends on the processor architecture.
+</p>
+
+<p>
+The bus controller always appears in slot 31; its 64K address space is
+divided in two.
+The lower half is divided into 32 1K config regions, one per slot.
+The upper half is divided into 32 1K control regions, one per CPU.
+In addition to configuration, the config region of the bus
+controller's config region contains the bus controller's own
+registers, described below.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Addressing the Bus</font></h3>
+
+<p>
+Thus, the <em>physical</em> address for slot <tt>N</tt>, holding the
+registers and other material for the device placed the slot, is given
+by
+<pre>
+	LAMEBASE + (0x10000*N)
+</pre>
+The physical address for slot <tt>N</tt>'s config region is given by
+<pre>
+	LAMEBASE + (0x10000*31) + (0x400*N)
+</pre>
+The physical address for CPU <tt>N</tt>'s control region is given by
+<pre>
+	LAMEBASE + (0x10000*31) + 0x8000 + (0x400*N)
+</pre>
+Virtual addresses will of course vary depending on processor
+architecture and MMU state.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Physical Memory Layout</font></h3>
+
+<p><b>MIPS.</b></p>
+
+<p>
+On 32-bit MIPS processors, the first 512 megabytes of the physical
+address space is hardwired to appear at kernel virtual addresses
+0x8000 0000 (cached) and 0xA000 0000 (uncached).
+Also, several virtual addresses starting at 0xbfc0 0000 are hardwired
+into the architecture and must point into the firmware ROM.
+</p>
+
+<p>
+For this reason, LAMEBASE is set to 0x1fe0 0000, so the LAMEbus mapping
+area appears at the top end of these regions. The physical memory map
+is as follows:
+<table width=100%>
+<tr><td width=5%>&nbsp;</td><td>
+
+<table width=100% border=1>
+<tr><th width=20%>Address</th><th align=left>Region</th></tr>
+
+<tr><td><tt>0xffff ffff</tt></td>
+<td rowspan=2>Upper physical RAM (above 508 MB)</td></tr>
+<tr><td><tt>0x2000 0000</tt></td></tr>
+
+<tr><td><tt>0x1fff ffff</tt></td><td rowspan=2>LAMEbus devices</td></tr>
+<tr><td><tt>0x1fe0 0000</tt></td></tr>
+
+<tr><td><tt>0x1fdf ffff</tt></td><td rowspan=2>Boot ROM area</td></tr>
+<tr><td><tt>0x1fc0 0000</tt></td></tr>
+
+<tr><td><tt>0x1fbf ffff</tt></td>
+<td rowspan=2>First 508 MB of physical RAM</td></tr>
+<tr><td><tt>0x0000 0000</tt></td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td></tr>
+</table>
+</p>
+
+<p>
+Virtual memory map:
+<table width=100%>
+<tr><td width=5%>&nbsp;</td><td>
+
+<table width=100% border=1>
+
+<tr>
+<th width=20%>Address</th>
+<th width=10%>MIPS<br>Segment</th>
+<th width=23%>Region</th>
+<th align=left>MIPS hardwired address</th>
+</tr>
+
+<tr>
+<td><tt>0xffff ffff</tt></td>
+<td rowspan=2>kseg2</td>
+<td rowspan=2>TLB-mappable<br>kernel space</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xc0000000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xbfffffff</tt></td>
+<td rowspan=8>kseg1</td>
+<td rowspan=2>LAMEbus mapping area</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xbfe00000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xbfdfffff</tt></td>
+<td rowspan=4>Boot ROM area<br>(uncached)</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xbfc00180</tt></td>
+<td>Exception address if "boot" flag is set</td>
+</tr>
+
+<tr>
+<td><tt>0xbfc00100</tt></td>
+<td>UTLB exception address if "boot" flag is set</td>
+</tr>
+
+<tr>
+<td><tt>0xbfc00000</tt></td>
+<td>Execution begins here after processor reset.</td>
+</tr>
+
+<tr>
+<td><tt>0xbfbfffff</tt></td>
+<td rowspan=2>First 508 MB of RAM<br>(uncached)</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0xa0000000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x9fffffff</tt></td>
+<td rowspan=7>kseg0</td>
+<td rowspan=2>Cached LAMEbus<br>(not useful)</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x9fe00000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x9fdfffff</tt></td>
+<td rowspan=2>Boot ROM area<br>(cached)</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x9fc00000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x9fbfffff</tt></td>
+<td rowspan=3>First 508 MB of RAM<br>(cached)</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x80000080</tt></td>
+<td>Exception address if "boot" flag not set.</td>
+</tr>
+
+<tr>
+<td><tt>0x80000000</tt></td>
+<td>UTLB exception address if "boot" flag not set.</td>
+</tr>
+
+<tr>
+<td><tt>0x7fffffff</tt></td>
+<td rowspan=2>kuseg</td>
+<td rowspan=2>User space</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>0x00000000</tt></td>
+<td>&nbsp;</td>
+</tr>
+
+</table>
+
+</td><td width=5%>&nbsp;</td></tr>
+</table>
+</p>
+
+<p>
+Because the MIPS has a 32-bit memory bus, all registers (all LAMEbus
+device registers are 32-bit) can be read or written atomically in a
+single instruction.
+</p>
+
+<p><b>Ant-32.</b></p>
+
+<p>
+The experimental Ant-32 build of System/161 is deprecated.
+</p>
+
+<p><b>i386.</b></p>
+
+<p>
+LAMEbus for i386 has not been implemented, and probably will not be;
+however, if it is, the projected layout is with LAMEBASE at
+0xffe0 0000, a boot ROM area below that, and all the rest of the
+physical address space potentially used by RAM:
+<table width=100%>
+<td width=5%>&nbsp;</td><td>
+
+<table width=100% border=1>
+<tr><th width=20%>Address</th><th align=left>Region</th></tr>
+
+<tr><td><tt>0xffff ffff</tt></td><td rowspan=2>LAMEbus devices</td></tr>
+<tr><td><tt>0xffe0 0000</tt></td></tr>
+
+<tr><td><tt>0xffdf ffff</tt></td><td rowspan=2>Boot ROM area</td></tr>
+<tr><td><tt>0xffc0 0000</tt></td></tr>
+
+<tr><td><tt>0xffbf ffff</tt></td>
+<td rowspan=2>Physical RAM (up to 4092 MB)</td></tr>
+<tr><td><tt>0x0000 0000</tt></td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+Note that this is not compatible with the traditional ISA-derived mess
+found on stock i386-based machines.
+</p>
+
+<p>
+Also note that on i386 the virtual memory map can be arranged however
+desired.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Bus Configuration</font></h3>
+
+<p>
+Because the bus is always mapped, and interrupt lines are always
+connected, no explicit configuration of system resources is required.
+However, it is still necessary for system software to inspect the bus
+to find what devices are connected, and to perform certain control
+operations. For that reason, as mentioned above, a 1K config region is
+associated with each slot. Each such config region contains the
+following registers:
+
+<table width=100%>
+<td width=5%>&nbsp;<td>
+
+<table width=100%>
+<tr><th width=15% align=left>Name</th>
+    <th width=15% align=left>Offset</th>
+    <th           align=left>Description</th></tr>
+<tr><td>VID</td><td><tt>0x00-0x03</tt></td><td>Vendor ID</td></tr>
+<tr><td>DID</td><td><tt>0x04-0x07</tt></td><td>Device ID</td></tr>
+<tr><td>DRL</td><td><tt>0x08-0x0b</tt></td><td>Device Revision Level</td></tr>
+<tr><td>&nbsp;</td><td><tt>0x0c-0x3ff</tt></td><td>Reserved</td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+The Vendor ID, Device ID, and Device Revision Level in combination
+uniquely identify the hardware device present in the slot.
+<p>
+
+Vendor IDs defined are as follows:
+<p>
+<table width=100%>
+<td width=5%>&nbsp;<td>
+
+<table width=100%>
+<tr><th width=15% align=left>Value</th>	<th align=left>Organization</th></tr>
+<tr><td><tt>0</tt></td>
+    <td>No card present</td></tr>
+<tr><td><tt>1</tt></td>
+    <td>System/161 Development Team</td></tr>
+<tr><td><tt>0xffff ffff</tt></td>
+    <td>Private experimental or research use</td></tr>
+<tr><td>Other</td>
+    <td>Reserved</td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+If no card is present in a given slot, the other config registers may
+contain invalid values, and references to that slot's mapping area
+will (normally) cause memory bus errors.
+</p>
+
+<p>
+The Device ID and Device Revision Level values are defined by the
+vendors. The System/161 Development Team devices are documented in an
+<A HREF=devices.html>accompanying document</A>.
+</p>
+
+<A NAME=controller>
+<h3><font face=tahoma,arial,helvetica,sans>Bus Controller</font></h3>
+
+<p>
+Offsets 512-1023 (0x200-0x3ff) of the bus controller's own
+configuration region are mapped to the bus controller's own
+registers.
+</p>
+
+<p>
+The System/161 2.x multiprocessor bus controller (VID 1, DID 10) has
+the following registers:
+</p>
+
+<table width=100%>
+<td width=5%>&nbsp;<td>
+
+<table width=100%>
+<tr><th width=10%>Name</th><th width=10%>Offset</th>
+				<th align=left>Description</th></tr>
+<tr><td>RAMSZ</td><td>0x200-0x203</td>
+				<td>Size of physical RAM in bytes</td></tr>
+<tr><td>IRQS</td><td>0x204-0x207</td>
+			<td>Mask of slots presently interrupting</td></tr>
+<tr><td>PWR</td><td>0x208-0x20b</td>
+			<td>Power enable register</td></tr>
+<tr><td>IRQE</td><td>0x20c-0x20f</td>
+			<td>Global interrupt enable register</td></tr>
+<tr><td>CPUS</td><td>0x210-0x213</td>
+			<td>Mask of CPUs present in the system</td></tr>
+<tr><td>CPUE</td><td>0x214-0x217</td>
+			<td>Mask of CPUs powered up and executing</td></tr>
+<tr><td>SELF</td><td>0x218-0x21b</td>
+			<td>Bit corresponding to reading CPU</td></tr>
+<tr><td></td><td>0x21c-0x3ff</td><td>Reserved</td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+
+<p>
+RAMSZ reports the system main board configuration. Writes are
+rejected. Where the physical RAM appears in the physical address
+space, and whether it is contiguous (and if not, where the gaps are)
+depends on the processor type.
+</p>
+
+<p>
+The IRQS register holds a 1 for each slot that is presently asserting
+its IRQ line. Writes to IRQS are rejected; interrupts should be
+cleared on the devices generating them. Bit 0 represents slot 0,
+etc. Thus bit 31 is the bus controller's bit.
+</p>
+
+<p>
+The PWR register holds a 1 for each slot that is currently powered.
+Writing to this register powers devices on and off. Powering off the
+system mainboard switches the system off. Note: if the mainboard is
+powered off, all other slots should be powered off as well. At
+startup, slots with devices in them are powered; others are
+unpowered.
+</p>
+
+<p>
+The IRQE register holds a 1 for each slot that is allowed to generate
+interrupts. Slots whose bit in IRQE is zero may assert their IRQ line
+(and thus appear in IRQS) but will not generate a processor interrupt
+by doing so.
+</p>
+
+<p>
+The CPUS register holds a 1 for each CPU that is present on the system
+board. These are not necessarily contiguous in the word; in a two-CPU
+configuration the CPUs present may be e.g. 0 and 16, leading to a
+value of 0x0001 0001 in this register.
+</p>
+
+<p>
+The CPUE register holds a 1 for each CPU that is enabled, that is,
+powered up and executing. Upon board reset only one CPU (the boot CPU)
+will be enabled; this will normally be CPU 0. Others that are present
+may be activated by writing 1s into this register. Enabling a CPU that
+is not present has undefined results.
+</p>
+
+<p>
+The SELF register holds a 1 in the bit position corresponding to the
+currently executing CPU that is reading the register. This allows
+distinguishing CPUs from one another. (Note that the system board
+cannot distinguish among cores on the same CPU; that requires
+additional on-chip facilities.)
+</p>
+
+<p>
+<b>Device Revision Level.</b>
+The device revision level of the multiprocessor system board is 1.
+</p>
+
+<A NAME=oldcontroller>
+<h3><font face=tahoma,arial,helvetica,sans>Old Bus Controller</font></h3>
+
+<p>
+The older System/161 1.x uniprocessor bus controller (VID 1, DID 1),
+which is still supported and may be configured as "oldmainboard",
+has the following registers:
+</p>
+
+<table width=100%>
+<td width=5%>&nbsp;<td>
+
+<table width=100%>
+<tr><th width=10%>Name</th><th width=10%>Offset</th>
+				<th align=left>Description</th></tr>
+<tr><td>RAMSZ</td><td>0x200-0x203</td>
+				<td>Size of physical RAM in bytes</td></tr>
+<tr><td>IRQS</td><td>0x204-0x207</td>
+			<td>Mask of slots presently interrupting</td></tr>
+<tr><td>PWR</td><td>0x208-0x20b</td>
+			<td>Power enable register</td></tr>
+<tr><td>IRQE</td><td>0x20c-0x20f</td>
+			<td>Interrupt enable register</td></tr>
+<tr><td></td><td>0x210-0x3ff</td><td>Reserved</td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+
+<p>
+RAMSZ, IRQS, and IRQE are the same as in the multiprocessor bus
+controller.
+</p>
+
+<p>
+The PWR register switches the system off if the value
+<!-- 0xfee1dead -->
+0
+is written into it. Other writes have no effect, and reading produces
+undefined results.
+</p>
+
+<p>
+<b>Device Revision Levels.</b>
+Two levels of the bus controller device are defined.
+<ul>
+<li> DRL 1, the baseline, supports the RAMSZ, IRQS, and PWR registers.
+<li> DRL 2, introduced in System/161 1.15, adds support for the IRQE register.
+</ul>
+The IRQE register is defined so as to be backwards compatible; that
+is, software that works with the DRL 1 device will work with the DRL 2
+device without modification.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>CPU Control Area</font></h3>
+
+<p>
+Each CPU control area contains the following:
+</p>
+
+<table width=100%>
+<td width=5%>&nbsp;<td>
+
+<table width=100%>
+<tr><th width=10%>Name</th><th width=10%>Offset</th>
+			<th align=left>Description</th></tr>
+<tr><td>CIRQE</td><td>0x000-0x003</td>
+			<td>Per-CPU interrupt enable register</td></tr>
+<tr><td>CIPI</td><td>0x004-0x007</td>
+		<td>Per-CPU inter-processor interrupt register</td></tr>
+<tr><td>&nbsp;</td><td>0x008-0x2ff</td><td>Reserved</td></tr>
+<tr><td>CRAM</td><td>0x300-0x3ff</td><td>Per-CPU scratch buffer</td></tr>
+</table>
+
+</td><td width=5%>&nbsp;</td>
+</table>
+
+<p>
+CIRQE is the same as IRQE, but per-processor. This allows interrupts
+to be routed to one or more processors as desired. CIRQE is applied
+downstream of IRQE; that is, an interrupt disabled in IRQE will never
+be delivered regardless of the setting of CIRQE on any CPU. Note:
+there is no hardware support for dispatching interrupts to multiple
+CPUs round-robin fashion.
+</p>
+
+<p>
+CIPI allows sending inter-processor interrupts. The inter-processor
+interrupt pin of each CPU is asserted if its CIPI register contains a
+nonzero value.
+</p>
+
+<p>
+CRAM is a 128-byte scratch area used for system startup, as described
+below. After startup it can be used as desired by the OS.
+</p>
+
+<p>
+On the old uniprocessor motherboard, the entire CPU control area is
+reserved and accesses yield undefined behavior.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Supporting Both
+Controllers</font></h3>
+
+<p>
+A kernel that supports both mainboard types (uniprocessor and
+multiprocessor) requires abstraction of the mainboard functions in
+software.
+Having accomplished that, the uniprocessor mainboard can be made to
+mimic a multiprocessor mainboard with one CPU as follows:
+<ul>
+<li> Reads from CPUS, CPUE, and SELF should yield a falsified value of 1.
+<li> Writes to PWR of values other than 0 should be blocked/ignored.
+<li> Accesses to CIRQE should be redirected to IRQE.
+<li> Writes to CIPI should be blocked/ignored.
+<li> Reads from CIPI should yield a falsified value of 0.
+<li> Accesses to CRAM should be redirected to a reserved region in
+     main memory.
+</ul>
+Additionally, to be able to run on DRL 1 of the old mainboard such a
+kernel must not rely on individual interrupt masking via CIRQE or IRQE
+being available at all.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Bus Power-Up</font></h3>
+
+<p>
+At power-up time, the devices present are automatically probed and the
+VID, DID, and DRL values become available in the configuration
+registers. The CPUS register, if present, is loaded. The amount of RAM
+present is probed and the RAMSZ register is loaded.
+The IRQE and CIRQE registers, if present, are loaded with 0xffff ffff.
+All devices are reset to a state such that they will not generate
+interrupts until otherwise programmed.
+</p>
+
+<p>
+At this point, the boot CPU is started. On the multiprocessor board
+the CPUE register is loaded so as to enable the boot CPU, usually CPU
+0. On the uniprocessor board, the one CPU is simply released from
+reset. Control is transferred to the boot ROM.
+</p>
+
+<p>
+The boot ROM has no published entry points and supplies no services
+besides system startup. In fact, it may or may not actually be
+present, as in the System/161 environment system startup can be
+effected without it, inside the simulator.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Boot ROM</font></h3>
+
+<p>
+The boot ROM loads an ELF kernel image in a suitable
+processor-dependent way, and jumps to the image's entry point. A
+bootup stack is established. A single null-terminated string
+(generated from the kernel arguments passed on the System/161 command
+line) is passed as a function argument to the entry point.
+</p>
+
+<p>
+On the multiprocessor system board, the boot string is placed in a
+suitable but unspecified location in main memory. The boot stack is
+established at the top of the CRAM area.
+</p>
+
+<p>
+For secondary CPUs and secondary cores on the boot CPU, which are not
+normally started until the kernel has taken control of the system, the
+boot stack is established at the top of the CRAM area, and the
+contents of the lowest word in the CRAM area are read and used as an
+entry point to begin execution within the kernel.
+</p>
+
+<p>
+On the old uniprocessor system board, the boot string and the boot
+stack are placed in a suitable but unspecified location in main
+memory.
+</p>
+
+<p><b>MIPS.</b></p>
+
+<p>
+The kernel should be linked to run at or near virtual address
+0x8000 0000.
+The kernel is loaded into the corresponding physical memory at or near
+physical address 0. The boot string (and, if appropriate, the boot
+stack) are placed at or near the high end of memory, to avoid
+conflicting with the kernel. The kernel should as soon as possible
+copy the boot string and establish its own stack in a known
+location. Then all memory may be used safely.
+</p>
+
+<p>
+The address of the boot string is passed in the a0 ($4) register.
+The <tt>sp</tt> register points to the top of a stack region as
+previously defined. However, the startup code should not assume that a
+proper caller stack frame already exists on the stack. (That is,
+writing a0 back to its argument slot through the stack pointer may
+produce undefined behavior.)
+The contents of other registers, including the CPU configuration
+registers, are unspecified. The TLB state is unspecified. The CPU
+cache is in a state suitable for routine operation.
+</p>
+
+<p><b>Ant-32.</b></p>
+
+<p>
+The experimental Ant-32 build of System/161 is deprecated.
+</p>
+
+<p><b>i386.</b></p>
+
+<p>
+Not yet specified.
+</p>
+
+
+</body>
+</html>

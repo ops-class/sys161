@@ -1,0 +1,29 @@
+.Dd January 5, 2015
+.Dt STAT161 1
+.Os System/161 2.x
+.Sh NAME
+.Nm stat161
+.Nd System/161 status monitor
+.Sh SYNOPSIS
+.Nm stat161
+.Sh DESCRIPTION
+The
+.Nm stat161
+program prints hardware counters from a running System/161 process.
+If no such process is running in the current directory,
+.Nm stat161
+waits until one starts, polling once per second.
+If the System/161 process exits,
+.Nm stat161
+disconnects from it and waits for another to start.
+.Sh FILES
+.Bl -tag -width .sockets/meter -compact
+.It Pa .sockets/meter
+The socket used to read information.
+.El
+.Sh SEE ALSO
+.Xr sys161 1
+.Sh BUGS
+The set of counters printed and the print interval are fixed.
+The print interval depends on the internal timing of System/161 and
+may thus vary depending on workload.

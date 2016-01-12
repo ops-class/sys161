@@ -1,0 +1,81 @@
+
+<head>
+<title>Network Connectivity with hub161</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+Network Connectivity with <tt>hub161</tt>
+</font></h2>
+
+<p>
+If you are using the <A HREF=devices.html#nic>network card</A>, you
+need to use the <tt>hub161</tt> program to provide a simulated network
+for the card to plug into.
+</p>
+
+<p>
+When you run <tt>hub161</tt>, you can optionally give it, on its
+command line, the name of a Unix-domain socket to listen to. The
+default is <tt>.sockets/hub</tt>. This pathname may then be specified
+in the <tt>sys161.conf</tt> file(s) of the system(s) that wish to
+connect to that hub.
+</p>
+
+<p>
+Each socket can only have one hub running on it at a time; however,
+you can have as many hubs as you like at once by giving them different
+socket names.
+</p>
+
+<p>
+If you give the cards plugged into the same hub duplicate hardware
+addresses, bizarre things will happen.
+</p>
+
+<p>
+No facility is provided for gatewaying <tt>hub161</tt> packets onto
+the real network via the host system. Such a facility could be
+written, albeit with some difficulty, but will be fairly useless
+unless the operating system running within System/161 contains its own
+complete TCP/IP implementation.
+</p>
+
+<p>
+The simulated network is a very simple link layer. All packets are
+sent to the hub process, which rebroadcasts them to all network cards.
+There is very little attempt at realism in general.
+</p>
+
+<p>
+There is no effort made to synchronize the time among multiple
+instances of System/161 connected to the same hub; thus, packets may
+appear to travel in time. Furthermore, because of the way System/161
+handles time, any attempt to synchronize the time in software is
+likely doomed to failure.
+</p>
+
+<p>
+Because <tt>hub161</tt> communicates over Unix-domain sockets, it and
+all the instances of <tt>sys161</tt> or <tt>trace161</tt> that wish to
+connect to it must be run on the same host.
+</p>
+
+<p>
+It should not be necessary to restart <tt>hub161</tt> if any of the
+<tt>sys161</tt> processes attached to it die, or vice-versa either,
+although a delay of up to a few seconds on a busy host system may
+occur. 
+</p>
+
+<p>
+If you are not using the network, it is recommended that you comment
+the network devices out of <tt>sys161.conf</tt> to reduce overhead on
+the host system.
+</p>
+
+</body>
+</html>

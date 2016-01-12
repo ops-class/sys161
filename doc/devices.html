@@ -1,0 +1,498 @@
+<html>
+<head>
+<title>System/161 LAMEbus Devices</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+System/161 LAMEbus Devices
+</font></h2>
+
+These devices have LAMEbus vendor id 1 (System/161 Development Team).
+<p>
+
+<table width=100% border=0>
+<tr><th align=left width=5%>DID</th><th align=left width=5%>DRL</th>
+						<th></th></tr>
+<tr><td>1</td><td>1</td><td>
+Old uniprocessor bus controller -- see <A HREF=lamebus.html>LAMEbus spec</A>
+</td></tr>
+
+<tr><td>2</td><td>1</td><td><A HREF=#timer>Timer/clock card</A></td></tr>
+<tr><td>3</td><td>2</td><td><A HREF=#disk>Fixed disk</A></td></tr>
+<tr><td>4</td><td>1</td><td><A HREF=#serial>Serial console</A></td></tr>
+<tr><td>5</td><td>1</td><td><A HREF=#screen>Text screen</A></td></tr>
+<tr><td>6</td><td>2</td><td><A HREF=#nic>Network interface</A></td></tr>
+<tr><td>7</td><td>1</td><td><A HREF=#emufs>Emulator filesystem</A></td></tr>
+<tr><td>8</td><td>3</td><td><A HREF=#trace>Hardware trace control</td></tr>
+<tr><td>9</td><td>1</td><td><A HREF=#rand>Random number generator</A></td></tr>
+
+<tr><td>10</td><td>1</td><td>
+Multiprocessor bus controller -- see <A HREF=lamebus.html>LAMEbus spec</A>
+</td></tr>
+
+</table>
+
+<hr>
+
+<A NAME=timer>
+<h4><font face=tahoma,arial,helvetica,sans>Timer/clock card</font></h4>
+Device id: 2<br>
+Oldest revision: 1<br>
+Current revision: 1<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Current time (seconds)</td></tr>
+<tr><td>4-7</td><td>Current time (nanoseconds)</td></tr>
+<tr><td>8-11</td><td>Restart-on-expiry flag</td></tr>
+<tr><td>12-15</td><td>True if interrupt (reading clears)</td></tr>
+<tr><td>16-19</td><td>Countdown time (usec) (writing starts timer)</td></tr>
+<tr><td>20-23</td><td>Speaker (write any value to beep)</td></tr>
+<tr><td>24-27</td><td>Reserved</td></tr>
+<tr><td>28-31</td><td>Reserved</td></tr>
+</table>
+</blockquote>
+
+An interrupt is generated when the countdown time reaches 0. The
+countdown timer is automatically restarted if the restart-on-expiry
+register has a nonzero value.
+<p>
+
+Reading from the speaker produces undefined behavior.
+<p>
+
+The current time registers represent UTC, where the epoch is midnight
+on January 1, 1970, as per the Unix <tt>time</tt> call. (In 2038 this will
+break. Oh no.)
+
+<hr>
+
+<A NAME=disk>
+<h4><font face=tahoma,arial,helvetica,sans>Fixed disk</font></h4>
+Device id: 3<br>
+Oldest revision: 2<br>
+Current revision: 2<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Number of sectors (total)</td></tr>
+<tr><td>4-7</td><td>Status</td></tr>
+<tr><td>8-11</td><td>Sector number</td></tr>
+<tr><td>12-15</td><td>Rotation speed (RPM)</td></tr>
+</table>
+</blockquote>
+
+A 512-byte sector transfer buffer is mapped at offset 32768.
+<p>
+
+The disk can do one operation at a time. To perform an operation,
+store the sector number into the sector register, and then write
+either the read-in-progress or write-in-progress values into the 
+status register. Changing the sector number register while an
+operation is in progress produces undefined results.
+<p>
+
+The status register reports the present state of the disk. When it
+is reporting a completed operation, the IRQ line is raised. Writing
+zero back (or starting another operation) clears the interrupt
+condition. Writing zero back when an operation is in progress aborts
+the operation. Writing values other than zero or the values that 
+start operations into the status register produces undefined
+results. 
+<p>
+
+The disk is assumed to never need low-level formatting. The sector
+size is 512 bytes. Note that the 32-bit linear sector addressing
+limits disk size to 2^32 * 512 = 2^41 bytes, or 2 TB. In practice
+implementations may have lower limits.
+<p>
+
+The status register bits are as follows:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Code</th><th align=left>Description</th></tr>
+<tr><td>1</td>	<td>Operation in progress</td></tr>
+<tr><td>2</td>	<td>Operation is write</td></tr>
+<tr><td>4</td>	<td>Operation completed</td></tr>
+<tr><td>8</td>	<td>Invalid sector number</td></tr>
+<tr><td>16</td>	<td>Media error</td></tr>
+</table>
+</blockquote>
+
+This results in the following values being meaningful in the status
+register:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Code</th><th align=left>Description</th></tr>
+<tr><td>0</td>	<td>Device idle</td></tr>
+<tr><td>1</td>	<td>Read operation in progress</td></tr>
+<tr><td>3</td>	<td>Write operation in progress</td></tr>
+<tr><td>4</td>	<td>Read operation succeeded</td></tr>
+<tr><td>6</td>	<td>Write operation succeeded</td></tr>
+<tr><td>12</td>	<td>Invalid sector number on read</td></tr>
+<tr><td>14</td>	<td>Invalid sector number on write</td></tr>
+<tr><td>20</td>	<td>Media error on read</td></tr>
+<tr><td>22</td>	<td>Media error on write</td></tr>
+</table>
+</blockquote>
+
+Once a write operation has reported successful completion, the disk
+guarantees that the complete sector written will in fact make it to
+stable storage.
+
+<hr>
+
+<A NAME=serial>
+<h4><font face=tahoma,arial,helvetica,sans>Serial console</font></h4>
+Device id: 4<br>
+Oldest revision: 1<br>
+Current revision: 1<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Character buffer</td></tr>
+<tr><td>4-7</td><td>Write IRQ register</td></tr>
+<tr><td>8-11</td><td>Read IRQ register</td></tr>
+<tr><td>12-15</td><td>Reserved</td></tr>
+</table>
+</blockquote>
+
+This is a very, very simple console interface. Writing to the first
+register causes a character to be printed. Reading from it returns the
+last character typed. 
+<p>
+
+You must wait until one write has completed before starting another
+one, or the output may be garbled.
+<p>
+
+The two IRQ registers have three bits each. Bit 0 (IRQEN) controls
+whether interrupts are generated; if bit 0 is clear, interrupts for
+writes or reads (respectively) will not be generated at all.
+<p>
+
+Bit 1 (CMPL) is latched on when the device completes a (write or read,
+respectively) operation. It can be cleared by software. Bit 2 (FORCE)
+is controlled only by software. The device's IRQ line is asserted if
+either the write or read IRQ register is in an asserting state; an IRQ
+register is in an asserting state if bit 0 is set and either bit 1 or
+bit 2 is set.
+<p>
+
+The FORCE bit can be used to perform polled I/O without causing the
+IRQ line to flap, which can cause problems in multiprocessor
+configurations. The basic approach is to set FORCE during the polled
+I/O if an IRQ was already pending, to keep it pending until the polled
+I/O is complete, and to clear IRQEN during the polled I/O if an IRQ
+was not already pending, to avoid triggering a spurious interrupt.
+See the OS/161 2.x driver (1.99.06 or higher) for example code.
+<p>
+
+NOTE: Bit 2 is only supported in System/161 versions 1.99.05 and up.
+The device revision is 1 regardless; if necessary the feature can be
+probed by writing FORCE (without IRQEN) to one of the IRQ registers
+and then reading the register back. If FORCE is read back, the feature
+is present; if 0 is read back, the feature is not available. Note that
+drivers written for prior versions of System/161 without the FORCE bit
+will continue to work as before.
+<p>
+
+The characters read from the device are 8-bit ASCII and control
+characters in the range 0-255. Non-ASCII keys, such as cursor keys or
+function keys, may appear as strings beginning with an escape
+sequence, or as values greater than 255. Unfortunately, in practice
+such characters may come from any of a number of sources and it is not
+practical to attempt to document their values or even map them into a
+single consistent set.
+
+<hr>
+
+<A NAME=screen>
+<h4><font face=tahoma,arial,helvetica,sans>Screen console</font></h4>
+Device id: 5<br>
+Oldest revision: 1<br>
+Current revision: 1<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Cursor position</td></tr>
+<tr><td>4-7</td><td>Display size</td></tr>
+<tr><td>8-11</td><td>Character input buffer</td></tr>
+<tr><td>12-15</td><td>Read IRQ register</td></tr>
+</table>
+</blockquote>
+
+Memory mapped screen interface. 32k of screen memory is mapped at
+offset 32768. The cursor position and display size registers are
+encoded with the X value in the most significant 16 bits and the Y
+value in the least significant 16 bits, with a zero base.
+<p>
+
+To make the cursor invisible, move it off the screen. This may or may
+not work depending on the display.
+<p>
+
+Reading is the same as with the serial console device. Writing is
+accomplished by scribbling in screen memory, one byte per character,
+increasing addresses moving first to the right then down across the
+screen.
+<p>
+
+Writing to the display size register should, in principle, work, but
+in practice will not.
+
+<hr>
+
+<A NAME=nic>
+<h4><font face=tahoma,arial,helvetica,sans>Network interface</font></h4>
+Device id: 6<br>
+Oldest revision: 2<br>
+Current revision: 2<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Receive interrupt register</td></tr>
+<tr><td>4-7</td><td>Transmit interrupt register</td></tr>
+<tr><td>8-11</td><td>Control register</td></tr>
+<tr><td>12-15</td><td>Status register</td></tr>
+</table>
+</blockquote>
+
+A 4k read buffer followed by a 4k write buffer is mapped at offset
+32768. Packets may not exceed 4k.
+<p>
+
+Simple network interface.
+<p>
+
+Bit 0 of each interrupt register is set when a receive (or transmit)
+is complete. These bits may be cleared by writing 0 back. If either
+interrupt register is nonzero, the card's IRQ line is asserted.
+<p>
+
+The control register contains two bits: bit 0 controls promiscuous
+mode, and bit 1 controls packet sending. If the promiscuous mode bit
+is set, all packets seen will be received, even those whose
+destination is elsewhere. Setting bit 1 starts a packet transmit. 
+Do not set bit 1 while a transmit is already in progress; undefined
+behavior may result. The rest of the control register is reserved and
+should be set to 0.
+<p>
+
+The lower 16 bits of the status register report the device hardware
+address. The rest is reserved. The status register is read-only.
+<p>
+
+To transmit, a packet should first be assembled in the send buffer.
+The destination and length fields in the link-level header must be set
+correctly. (The source and frame fields will be set by the card during
+transmit. However, the entire link-level header should be placed in
+the send buffer.) Then bit 1 of the control register should be set to
+1 to start transmission. An interrupt will occur when transmission is
+complete.
+<p>
+
+To receive, merely copy each packet out of the receive buffer as
+receive interrupts occur. Further packets arriving are discarded while
+the receive interrupt register is nonzero, so packets may be copied
+without being corrupted by further input.
+<p>
+
+The link-level packet header is 8 bytes long and has the following
+fields (always in network byte order):
+
+<blockquote>
+<table width=95% border=0>
+<tr><th align=left>Offset</th><th align=left>Size</th>
+<th align=left>Description</th></tr>
+<tr><td>0</td>	<td>2</td>	<td>Framing word (0xa4b3)</td></tr>
+<tr><td>2</td>	<td>2</td>	<td>Hardware from-address</td></tr>
+<tr><td>4</td>	<td>2</td>	<td>Total packet length</td></tr>
+<tr><td>6</td>	<td>2</td>	<td>Hardware to-address</td></tr>
+</table>
+</blockquote>
+
+The length field should hold the entire packet length, including the
+space taken by the header.
+<p>
+
+The hardware address 0xffff is the broadcast address; the hardware
+address 0x0000 is reserved for sending keepalives to the network hub.
+Software should not send packets to hardware address 0x0000.
+
+<hr>
+
+<A NAME=emufs>
+<h4><font face=tahoma,arial,helvetica,sans>Emulator passthrough
+filesystem</font></h4>
+Device id: 7<br>
+Oldest revision: 1<br>
+Current revision: 1<br>
+
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Handle number to do I/O with</td></tr>
+<tr><td>4-7</td><td>File offset for read/readdir/write</td></tr>
+<tr><td>8-11</td><td>Length of I/O</td></tr>
+<tr><td>12-15</td><td>Operation code</td></tr>
+<tr><td>16-19</td><td>Result code</td></tr>
+<tr><td>20-31</td><td>Reserved</td></tr>
+</table>
+</blockquote>
+
+A 16384-byte I/O buffer is mapped at offset 32768.
+<p>
+
+The operation codes are:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Code</th><th align=left>Description</th></tr>
+<tr><td>1</td>	<td>Open a file</td></tr>
+<tr><td>2</td>	<td>Create a file</td></tr>
+<tr><td>3</td>	<td>Create a file exclusively (O_EXCL)</td></tr>
+<tr><td>4</td>	<td>Close a file</td></tr>
+<tr><td>5</td>	<td>Read from a file</td></tr>
+<tr><td>6</td>	<td>Read one filename from a directory</td></tr>
+<tr><td>7</td>	<td>Write to a file</td></tr>
+<tr><td>8</td>	<td>Get size of a file</td></tr>
+<tr><td>9</td>	<td>Truncate a file</td></tr>
+</table>
+</blockquote>
+
+The result codes are:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Code</th><th align=left>Description</th></tr>
+<tr><td>0</td>	<td>Operation in progress or device idle</td></tr>
+<tr><td>1</td>	<td>Success</td></tr>
+<tr><td>2</td>	<td>Bad handle</td></tr>
+<tr><td>3</td>	<td>Bad operation code</td></tr>
+<tr><td>4</td>	<td>Bad pathname</td></tr>
+<tr><td>5</td>	<td>Bad I/O size</td></tr>
+<tr><td>6</td>	<td>File exists</td></tr>
+<tr><td>7</td>	<td>File is a directory</td></tr>
+<tr><td>8</td>	<td>Media error</td></tr>
+<tr><td>9</td>	<td>Out of handles</td></tr>
+<tr><td>10</td>	<td>Out of disk space</td></tr>
+<tr><td>11</td>	<td>File is not a directory</td></tr>
+<tr><td>12</td>	<td>Unknown other error</td></tr>
+<tr><td>13</td>	<td>Unsupported operation</td></tr>
+</table>
+</blockquote>
+
+
+The rest of the documentation for this device is reserved, on the
+grounds that it is complicated, messy, unclean, and may be subject to
+frequent change.
+
+<hr>
+
+<A NAME=trace>
+<h4><font face=tahoma,arial,helvetica,sans>Hardware trace
+controller</font></h4>
+Device id: 8<br>
+Oldest revision: 1<br>
+Current revision: 3<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Trace-on register</td></tr>
+<tr><td>4-7</td><td>Trace-off register</td></tr>
+<tr><td>8-11</td><td>Debugging printout register</td></tr>
+<tr><td>12-15</td><td>System state dump register</td></tr>
+<tr><td>16-19</td><td>Software debugger request</td></tr>
+<tr><td>20-23</td><td>Profiling enable toggle</td></tr>
+<tr><td>24-27</td><td>Profiling data clear</td></tr>
+</table>
+</blockquote>
+
+This device controls <tt>trace161</tt>'s trace flags, allowing them to
+be set or cleared on the fly. To set a trace flag, write the letter of
+its trace option to the trace-on register; to clear it, use the
+trace-off register. The letters are the same as those used on the
+<tt>trace161</tt> command line. If running <tt>sys161</tt> rather than
+<tt>trace161</tt>, this device may exist and be used, but the trace
+registers have no effect.
+<p>
+
+The debugging printout register, if written to, causes <tt>trace161</tt>
+or <tt>sys161</tt> to print a debug message, which includes the value
+written to the register.
+<p>
+
+The system state dump register, if written to, will cause a complete
+dump of the simulation state, tagged with the value written to the
+register. This feature is primarily intended for testing and debugging
+System/161 itself.
+<p>
+
+The software debugger request register, if written to, will cause
+System/161 to drop to the debugger.
+This is preferable to explicitly inserting a breakpoint instruction,
+because debuggers don't cope very well with hitting breakpoint
+instructions they didn't insert themselves.
+<p>
+
+When System/161 is collecting a profile, the profiling enable toggle
+register can be used to turn profile sampling on and off. Writing zero
+disables sampling; writing nonzero enables sampling. This value may be
+read back. Sampling is on by default if profiling was requested on the
+<tt>trace161</tt> command line; otherwise this register always reads
+zero and ignores writes.
+<p>
+
+If a profile is being collected, writing to the profiling data clear
+register erases all currently stored profile information. This can be
+used, for example, to discard profile data from system boot.
+<p>
+
+The software debugger request register was introduced in DRL 2.
+(This appeared in the System/161 2.0 release, after 1.99.10.)
+A device that reports DRL 1 does not have this register and attempts
+to write to it will fault.
+<p>
+
+The profiling enable toggle and profiling data clear registers were
+introduced in DRL 3. (This appeared in System/161 2.0.3.) A device
+that reports DRL 1 or 2 does not have these registers and accesses to
+them will fault.
+<p>
+
+All these registers, except for the profiling enable toggle register,
+are write-only.
+
+<hr>
+
+<A NAME=rand>
+<h4><font face=tahoma,arial,helvetica,sans>Random number generator</font></h4>
+Device id: 9<br>
+Oldest revision: 1<br>
+Current revision: 1<br>
+Registers:
+<blockquote>
+<table width=100% border=0>
+<tr><th width=10%>Offset</th><th align=left>Description</th></tr>
+<tr><td>0-3</td><td>Random value</td></tr>
+</table>
+</blockquote>
+
+Reading the register returns a 32-bit random value. In the simulated
+version, this value is generated by a pseudo-random generator whose
+seed can be specified explicitly. This allows for repeatable results,
+which can be helpful in some contexts.
+<p>
+
+</body>
+</html>

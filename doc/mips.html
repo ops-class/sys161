@@ -1,0 +1,922 @@
+<html>
+<head>
+<title>System/161 MIPS Processor</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+System/161 MIPS Processor
+</font></h2>
+
+<p>
+The 32-bit MIPS is the simplest "real" 32-bit processor for which
+development tools are readily available; furthermore, the MIPS
+architecture is already widely used for teaching in various contexts.
+This makes it a natural choice for System/161.
+</p>
+
+<p>
+The specific dialect of MIPS processor found in System/161, which for
+a lack of a better term we'll refer to as MIPS-161, is partway between
+a MIPS-I (r2000/r3000) and a more modern MIPS32. We intentionally use
+the simpler MIPS-I MMU architecture; exception handling is MIPS-I
+style; but in the interests of sanity cache control, to the extent
+it's required at all, is MIPS32. There are also a few idiosyncratic
+features specific to the MIPS-161, owing to some things being
+unspecified or underspecified in publicly-available documentation.
+</p>
+
+<p>
+There are two basic versions of the MIPS-161: the System/161 1.x
+version and the System/161 2.x version. The 2.x version is
+substantially more MIPS32ish and supports multiprocessor environemnts.
+Distinguishing these versions on the fly is discussed below.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Cores</font></h3>
+<p>
+Each MIPS-161 processor has only one core on the die. However, as
+noted <A HREF=system.html>elsewhere</A> System/161 supports up to 32
+processors on the mainboard. There is little software-visible
+difference between 32 single-core processors on one mainboard and 32
+cores in one processor.
+Most of what effects do exist are cache-related; these are not
+currently modeled by System/161 at all.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>User Mode</font></h3>
+<p>
+In user mode, the MIPS-161 behaves the same as any other 32-bit MIPS.
+All user instructions are fully interlocked and there are no pipeline
+hazards. All MIPS-I instructions are supported. MIPS-II and higher
+instructions are not supported, except (in System/161 2.0 and up) for
+the <tt>LL</tt> and <tt>SC</tt> instructions used for multiprocessor
+synchronization, and the <tt>SYNC</tt> memory barrier instruction.
+Other later MIPS instructions may be added in the future. (However,
+the "branch likely" family of instructions will never be supported.)
+Please consult your favorite MIPS reference for further details.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Out-of-Order Execution</font></h3>
+<p>
+The multiprocessor System/161 environment is cache-coherent.
+However, even with cache coherence, or when using uncached memory regions,
+processors that support out-of-execution may require so-called memory
+barrier instructions to ensure that memory accesses occur on the
+external bus (and become visible to other processors or devices) in
+the same order they are issued in machine code.
+</p>
+
+<p>
+In the System/161 2.x processor, the MIPS-II <tt>SYNC</tt> instruction
+can be used to wait until all pending load and store operations are
+complete. This guarantees that all memory updates before the
+<tt>SYNC</tt> become visible before any memory updates after the
+<tt>SYNC</tt>. All <tt>SYNC</tt> instructions executed on all cores
+and processors within a system occur in a single well defined global
+order.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Coprocessor Registers</font></h3>
+<p>
+A MIPS processor can have up to four coprocessors, numbered 0-3.
+Coprocessor 0 contains the MMU and other control logic; coprocessor 1
+is the FPU (or would be, if System/161 supported an FPU); and
+coprocessors 2 and 3 are normally unused.
+</p>
+
+<p>
+Each coprocessor can have up to 8 banks of 32 registers each.
+The "select" number used with some instructions identifies the
+register bank.
+Most registers of most coprocessors are in "select" 0.
+Note that the System/161 1.x processor ignores the "select" field, so
+all banks will appear to mirror bank 0.
+</p>
+
+<p>
+Coprocessor registers are accessed with the <tt>MFC0..3</tt> and
+<tt>MTC0..3</tt> family of instructions, to access coprocessors 0
+through 3, as follows:
+<pre>
+	mfc0 $4, $12, 0
+</pre>
+loads the contents of coprocessor 0 (kernel) register 12 select 0
+(STATUS) into general-purpose register 4 (a0), and
+<pre>
+	mtc0 $4, $12, 0
+</pre>
+does the reverse.
+When the select number is 0 (the common case) it may
+be omitted.
+</p>
+
+<p>
+Coprocessors must be "enabled" before being used by setting a bit in
+the STATUS register (see below).
+Coprocessor 0 is always enabled when in kernel mode; otherwise,
+access to a disabled coprocessor causes a coprocessor unusable
+exception (see below).
+For the FPU this can be used by system software to support lazy FPU
+context switching.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Kernel Mode</font></h3>
+<p>
+In kernel mode, the MIPS-161 is best thought of as a cache-coherent
+MIPS-I with some extensions borrowed from later MIPS dialects,
+The following sections are intended to fully define the kernel mode
+interface -- anything unspecified here is not an implicit reference to
+MIPS-I behavior but a documentation bug.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Kernel Registers</font></h3>
+
+<p>
+The MIPS-161 has 11 kernel registers in coprocessor 0. These are:
+<ul>
+<li> INDEX ($0)
+<li> RANDOM ($1)
+<li> TLBLO ($2)
+<li> CONTEXT ($4)
+<li> BADVADDR ($8)
+<li> TLBHI ($10)
+<li> STATUS ($12)
+<li> CAUSE ($13)
+<li> EPC ($14)
+<li> PRID ($15)
+<li> CFEAT ($15 select 1) (System/161 2.x only)
+<li> IFEAT ($15 select 2) (System/161 2.x only)
+</ul>
+
+with the following bit patterns:
+
+<!-- 
+   dholland 20140929: It is not clear to me what the colors in this
+   diagram were supposed to mean, and apparently I didn't see fit to
+   write them down anywhere. I *think* it goes as follows:
+      grey - fixed/uninteresting
+      red - read only, set by hardware
+      green - read/write, set only by software
+      blue - read/write, set by both hardware and software
+   This is consistent with the colors in STATUS, both before and after
+   my changes today; but if this was the intended model, the ASID
+   field of TLBHI should be green. Meh.
+-->
+
+<table>
+<tr>
+<th width="2%">31</th><th width="2%">30</th>
+<th width="2%">29</th><th width="2%">28</th>
+<th width="2%">27</th><th width="2%">26</th>
+<th width="2%">25</th><th width="2%">24</th>
+<th width="2%">23</th><th width="2%">22</th>
+<th width="2%">21</th><th width="2%">20</th>
+<th width="2%">19</th><th width="2%">18</th>
+<th width="2%">17</th><th width="2%">16</th>
+<th width="2%">15</th><th width="2%">14</th>
+<th width="2%">13</th><th width="2%">12</th>
+<th width="2%">11</th><th width="2%">10</th>
+<th width="2%">9</th><th width="2%">8</th>
+<th width="2%">7</th><th width="2%">6</th>
+<th width="2%">5</th><th width="2%">4</th>
+<th width="2%">3</th><th width="2%">2</th>
+<th width="2%">1</th><th width="2%">0</th>
+<td width="2%" rowspan=13 valign=top>Bits</td><td align=left>&nbsp;</td>
+</tr>
+
+<tr>
+<td colspan=1  align=center bgcolor=#ffdddd>P</td>
+<td colspan=17 align=center bgcolor=#dddddd>0</td>
+<td colspan=6  align=center bgcolor=#ddddff>SLOT</td>
+<td colspan=8  align=center bgcolor=#dddddd>0</td>
+<td>INDEX</td>
+</tr>
+
+<tr>
+<td colspan=18 bgcolor=#dddddd align=center>0</td>
+<td colspan=6  bgcolor=#ddddff align=center>SLOT</td>
+<td colspan=8  bgcolor=#dddddd align=center>0</td>
+<td>RANDOM</td>
+</tr>
+
+<tr>
+<td colspan=20 bgcolor=#ddddff align=center>PPAGE</td>
+<td colspan=1  bgcolor=#ddddff align=center>N</td>
+<td colspan=1  bgcolor=#ddddff align=center>D</td>
+<td colspan=1  bgcolor=#ddddff align=center>V</td>
+<td colspan=1  bgcolor=#ddddff align=center>G</td>
+<td colspan=8  bgcolor=#dddddd align=center>0</td>
+<td>TLBLO</td>
+</tr>
+
+<tr>
+<td colspan=11 bgcolor=#ddffdd align=center>PTBASE</td>
+<td colspan=19 bgcolor=#ffdddd align=center>VSHIFT</td>
+<td colspan=2  bgcolor=#dddddd align=center>0</td>
+<td>CONTEXT</td>
+</tr>
+
+<tr>
+<td colspan=32 bgcolor=#ffdddd align=center>BADVADDR</td>
+<td>BADVADDR</td>
+</tr>
+
+<tr>
+<td colspan=20 bgcolor=#ddddff align=center>VPAGE</td>
+<td colspan=6  bgcolor=#ddddff align=center>ASID</td>
+<td colspan=6  bgcolor=#dddddd align=center>0</td>
+<td>TLBHI</td>
+</tr>
+
+<tr>
+<td colspan=1  bgcolor=#ddffdd align=center>c3</td>
+<td colspan=1  bgcolor=#ddffdd align=center>c2</td>
+<td colspan=1  bgcolor=#ddffdd align=center>c1</td>
+<td colspan=1  bgcolor=#ddffdd align=center>c0</td>
+<td colspan=1  bgcolor=#dddddd align=center>P</td>
+<td colspan=1  bgcolor=#dddddd align=center>F</td>
+<td colspan=1  bgcolor=#dddddd align=center>R</td>
+<td colspan=1  bgcolor=#dddddd align=center>M</td>
+<td colspan=1  bgcolor=#dddddd align=center>6</td>
+<td colspan=1  bgcolor=#ddffdd align=center>B</td>
+<td colspan=1  bgcolor=#ddddff align=center>T</td>
+<td colspan=1  bgcolor=#ddddff align=center>S</td>
+<td colspan=1  bgcolor=#ddddff align=center>N</td>
+<td colspan=1  bgcolor=#dddddd align=center>C</td>
+<td colspan=1  bgcolor=#dddddd align=center>W</td>
+<td colspan=1  bgcolor=#dddddd align=center>I</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>F</td>
+<td colspan=1  bgcolor=#ddffdd align=center>F</td>
+<td colspan=2  bgcolor=#dddddd align=center>0</td>
+<td colspan=1  bgcolor=#ddddff align=center>KUo</td>
+<td colspan=1  bgcolor=#ddddff align=center>IEo</td>
+<td colspan=1  bgcolor=#ddddff align=center>KUp</td>
+<td colspan=1  bgcolor=#ddddff align=center>IEp</td>
+<td colspan=1  bgcolor=#ddddff align=center>KUc</td>
+<td colspan=1  bgcolor=#ddddff align=center>IEc</td>
+<td>STATUS</td>
+</tr>
+
+<tr>
+<td colspan=1  bgcolor=#ffdddd align=center>BD</td>
+<td colspan=1  bgcolor=#dddddd align=center>0</td>
+<td colspan=2  bgcolor=#ffdddd align=center>CE</td>
+<td colspan=12 bgcolor=#dddddd align=center>0</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ffdddd align=center>H</td>
+<td colspan=1  bgcolor=#ddffdd align=center>F</td>
+<td colspan=1  bgcolor=#ddffdd align=center>F</td>
+<td colspan=2  bgcolor=#dddddd align=center>0</td>
+<td colspan=4  bgcolor=#ffdddd align=center>EXC</td>
+<td colspan=2  bgcolor=#dddddd align=center>0</td>
+<td>CAUSE</td>
+</tr>
+
+<tr>
+<td colspan=32 bgcolor=#ffdddd align=center>EPC</td>
+<td>EPC</td>
+</tr>
+
+<tr>
+<!--
+<td colspan=16 bgcolor=#dddddd align=center>0</td>
+<td colspan=16 bgcolor=#ffdddd align=center>PRID</td>
+-->
+<td colspan=32 bgcolor=#ffdddd align=center>PRID</td>
+<td>PRID</td>
+</tr>
+
+<tr>
+<td colspan=32 bgcolor=#ffdddd align=center>CFEAT</td>
+<td>CFEAT</td>
+</tr>
+
+<tr>
+<td colspan=32 bgcolor=#ffdddd align=center>IFEAT</td>
+<td>IFEAT</td>
+</tr>
+
+</table>
+INDEX
+<ul>
+<li> P -- probe failure. Set if the <tt>TLBP</tt> instruction
+     fails to find a matching entry in the TLB.
+<li> SLOT -- TLB entry index, 0-63. This field is set by the
+     <tt>TLBP</tt> instruction; it is also used by the <tt>TLBWI</tt>
+     instruction.
+</ul>
+RANDOM
+<ul>
+<li> SLOT -- TLB entry index, 0-63, except that the values 0-7 are skipped.
+     This field is used by the
+     <tt>TLBWR</tt> instruction and is incremented on every clock
+     cycle. See below.
+</ul>
+TLBLO
+<ul>
+<li> PPAGE -- physical page number for this TLB entry.
+<li> N -- noncached; if set, accesses via this TLB entry will
+     be uncached.
+<li> D -- dirty; if set, write accesses via this TLB entry will
+     be permitted; otherwise they will trap. See below.
+<li> V -- valid; if set, accesses via this TLB entry will be
+     permitted; otherwise they will trap. See below.
+<li> G -- global; if set, the ASID field will be ignored when
+     matching this TLB entry.
+</ul>
+CONTEXT
+<ul>
+<li> PTBASE -- base address of page table. See below.
+<li> VSHIFT -- pre-masked-and-shifted BADVADDR for indexing
+     page table. See below.
+</ul>
+BADVADDR
+<ul>
+<li> BADVADDR -- failing virtual address on MMU exception.
+</ul>
+TLBHI
+<ul>
+<li> VPAGE -- virtual page number for this TLB entry.
+<li> ASID -- address space ID for this TLB entry.
+</ul>
+STATUS
+<ul>
+<li> c0-c3 -- enable bits for coprocessors 0-3. Coprocessor 0 is
+     always enabled in kernel mode.
+<li> P -- reduced power mode. Not implemented; will always read as 0.
+<li> F -- enable extended 64-bit FPU. Not implemented; will always
+     read as 0.
+<li> R -- reverse endianness in user mode. Not implemented; will
+     always read as 0.
+<li> M -- Enable 64-bit MDMX extensions. Not implemented; will
+     always read as 0.
+<li> 6 -- Enable 64-bit instructions. Not implemented; will
+     always read as 0.
+<li> B -- boot exceptions flag. If set, exceptions go to the boot ROM
+     instead of the kernel. This bit is set on powerup.
+<li> T -- duplicate TLB entries flag. This bit is set on entry to the
+     machine check exception generated when duplicate entries are
+     loaded into the TLB. May be cleared in software (after the TLB is
+     rectified) but should never be set by software.
+<li> S -- soft reset flag. This bit is set on entry to the reset
+     exception vector on a soft reset. May be cleared in software but
+     should never be set by software.
+<li> N -- NMI flag. This bit is set on entry to the reset
+     exception vector on a non-maskable interrupt. May be cleared in
+     software but should never be set by software.
+<li> C -- disable cache parity checking. Not implemented; will
+     always read as 0.
+<li> W -- swap caches. This is part of the mips r2000/r3000 cache
+     control system and should not be used; setting it will trigger a
+     machine check.
+<li> I -- isolate data cache. This is part of the mips r2000/r3000 cache
+     control system and should not be used; setting it will trigger a
+     machine check.
+<li> H -- hardware interrupt enable bit, lines 0-5. In System/161,
+     line 0 is connected to the interrupt line coming from the system
+     bus, and line 1 is used for interprocessor interrupts. Line 3 is
+     reserved for the FPU. Line 5 is used by the on-chip timer.
+<li> F -- software interrupt enable bit, lines 0-1.
+<li> KU -- 1 if user mode, 0 if kernel mode.
+<li> IE -- 1 if interrupts enabled, 0 if disabled.
+     See below regarding o/p/c.
+</ul>
+CAUSE
+<ul>
+<li> BD -- 1 if exception occurred in a branch delay slot.
+<li> CE -- coprocessor number for exception, if any.
+<li> H -- hardware interrupt state, 1=active, lines 0-5.
+<li> F -- software interrupt state, 1=active, lines 0-1.
+<li> EXC -- exception code.
+</ul>
+EPC
+<ul>
+<li> EPC -- saved program counter from exception.
+</ul>
+PRID
+<ul>
+<li> PRID -- processor ID code. See discussion below.
+</ul>
+CFEAT
+<ul>
+<li> CFEAT -- compatible processor feature bits. None are defined yet,
+so this register will read as 0. (In later versions of System/161 it
+may not.) Features appearing in this register are backward-compatible;
+system software that is not aware of them should be expected to still
+operate correctly. The CFEAT register is a MIPS-161 extension; it is
+not found in any standard or semistandard MIPS version.
+</ul>
+IFEAT
+<ul>
+<li> IFEAT -- incompatible processor feature bits. None are defined
+yet, so this register will read as 0. (In later versions of System/161
+it may not.) Features appearing in this register are <em>not</em>
+backward-compatible. System software that is not aware of them will
+probably not work. The IFEAT register is a MIPS-161 extension; it is
+not found in any standard or semistandard MIPS version.
+</ul>
+</p>
+
+<p>
+The k0 and k1 registers are general-purpose registers (not in
+coprocessor 0) that are reserved for use by the kernel during exception
+handling.
+They are not protected from access in user mode, so system software
+must not rely on them remaining unchanged during program execution;
+however, the kernel may clobber them freely and will ordinarily do so
+on entry to any exception handler.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Kernel Instructions</font></h3>
+<p>
+The following instructions are available only in kernel mode:
+<ul>
+<li> MFC0, MTC0 -- access coprocessor 0 (kernel) registers (as above)
+<li> WAIT (MIPS-II and up) -- suspend execution until external interrupt
+<li> RFE (MIPS-I) -- return from exception
+<li> TLBR, TLBWI, TLBWR, TLBP -- control the MMU
+</ul>
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans><tt>WAIT</tt></font></h3>
+<p>
+The <tt>WAIT</tt> instruction has been borrowed from MIPS-II. This
+operation puts the processor into a low-power state and suspends
+execution until some external event occurs, such as an interrupt.
+Since the exact behavior of <tt>WAIT</tt> is not clearly specified
+anywhere I could find, the MIPS-161 behavior is as follows:
+<ul>
+<li> <tt>WAIT</tt> should be executed with interrupts disabled or
+     masked in the processor.
+<li> <tt>WAIT</tt> will complete when any of the processor interrupt
+     pins are activated.
+<li> The interrupt is not serviced until it is unmasked or
+     re-enabled.
+</ul>
+WAIT is supported in all MIPS-161 versions.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Trap/Exception Handling</font></h3>
+
+<p>
+When an exception occurs, the following things happen:
+<nl>
+<li> The PC where the exception occurred is loaded into the EPC
+register.
+<li> If this was in a branch delay slot, the EPC register is set to
+the address of the branch (that is, 4 is subtracted) and the BD flag
+in the CAUSE register is set. Software need not examine the BD flag
+unless the exact address of the faulting instruction is wanted,
+e.g. for disassembly and analysis.
+<li> The EXC field of the CAUSE register is set to reflect what
+happened. The exception codes are listed below.
+<li> For coprocessor-related exceptions the CE field of the CAUSE
+register is set.
+<li> For interrupts the H and F bits of the CAUSE register are set to
+reflect the interrupt(s) that are active.
+<li> For MMU exceptions the BADVADDR register is loaded with the failing
+address. The page portion is placed in the VPAGE field of the TLBHI
+register. A masked and shifted form suitable for indexing a page table
+is placed in the VSHIFT field of the CONTEXT register.
+<li> The bottom six bits of the STATUS register are shifted left by
+two. The "o" (old) bits are lost; the "p" (previous) bits become the
+old bits; the "c" (current) bits become the previous bits; and the
+current bits are set to 0. This disables interrupts and puts the
+processor in kernel mode.
+<li> Execution continues from one of five hardwired addresses
+according to what happened and the setting of the B (boot) bit in the
+STATUS register.
+</p>
+
+<p>
+The exception handler addresses are:
+<table width=100%>
+<tr><td width=5%>&nbsp;</td><td>
+<table width=100%>
+<tr><th align=left>B</th><th align=left>Trap</th>
+                         <th align=left>Address</th></tr>
+<tr><td>1</td> <td>General</td> <td>0xbfc0 0180</td></tr>
+<tr><td>1</td> <td>UTLB</td>    <td>0xbfc0 0100</td></tr>
+<tr><td>1</td> <td>Reset</td>   <td>0xbfc0 0000</td></tr>
+<tr><td>0</td> <td>General</td> <td>0x8000 0080</td></tr>
+<tr><td>0</td> <td>UTLB</td>    <td>0x8000 0000</td></tr>
+</table>
+</td><td width=5%></tr>
+</table>
+A UTLB exception is a TLB miss that occurs against the user address
+space (0x0000 0000 - 0x7fff ffff) and occurs because no matching TLB
+entry was found. Other TLB exceptions go through the General vector.
+This allows a fast-path TLB refill handler. See below.
+</p>
+
+<p>
+Handling an exception generally requires saving state somewhere; the
+k0 and k1 registers (as noted above) can be clobbered arbitrarily by
+exception handlers and can be used while finding the context needed to
+save state safely.
+</p>
+
+<p>
+To return from an exception, one executes the following sequence:
+<pre>
+	jr k0
+	rfe
+</pre>
+where the k0 register has been loaded with the desired exception
+return address, either the value previously retrieved from the EPC
+register or some other address chosen by software. The RFE instruction
+is not a jump; it occurs in the delay slot of a jump. It shifts the
+six bottom bits of the status register right by two, undoing the shift
+done at exception entry time. This returns the processor to whatever
+interrupt state and mode (user/kernel) it was in when the exception
+occurred.
+</p>
+
+<p>
+Because there are three pairs of state bits, the processor can take
+two nested exceptions without losing state, if one is careful. This is
+to facilitate the fast-path TLB refill handler. See below.
+</p>
+
+<p>
+The two soft interrupt lines can be activated by writing to the CAUSE
+register.
+</p>
+
+<p>
+The exception codes:
+<ul>
+<li> IRQ (0) -- Interrupt
+<li> MOD (1) -- "Modify", TLB read-only fault
+<li> TLBL (2) -- TLB miss on load
+<li> TLBS (3) -- TLB miss on store
+<li> ADEL (4) -- Address error on load
+<li> ADES (5) -- Address error on store
+<li> IBE (6) -- Bus error on instruction fetch
+<li> DBE (7) -- Bus error on data access
+<li> SYS (8) -- System call
+<li> BP (9) -- Breakpoint instruction
+<li> RI (10) -- Reserved (illegal) instruction
+<li> CPU (11) -- Coprocessor unusable
+<li> OVF (12) -- Integer overflow
+<li> 13-15 -- Reserved
+</ul>
+The IBE and DBE exceptions are not MMU exceptions and do not set
+BADVADDR.
+They mean that something went wrong on the external memory bus (e.g.
+access to nonexistent physical memory) which usually means a kernel
+bug.
+Division by zero manifests as a breakpoint instruction.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>MMU</font></h3>
+<p>
+The MMU is the MIPS-I MMU, with a 64-entry fully associative TLB where
+each entry maps one 4K virtual page to one 4K physical page. The
+paired pages setup of later MIPS processors is not present, and there
+is no support for superpages.
+</p>
+
+<p>
+The processor's virtual address space is divided into four segments:
+<table width=100%>
+<tr><td width=5%>&nbsp;</td><td>
+<table width=100%>
+<tr><th width=15% align=left>Name</th><th align=left>Description</th></tr>
+<tr><td>kseg2</td><td>Kernel mode only; TLB-mapped, cacheable</td></tr>
+<tr><td>kseg1</td><td>Kernel mode only; direct-mapped, uncached</td></tr>
+<tr><td>kseg0</td><td>Kernel mode only; direct-mapped, cached</td></tr>
+<tr><td>kuseg</td><td>User and kernel mode; TLB-mapped, cacheable</td></tr>
+</table>
+</td><td width=5%>&nbsp;</td></tr>
+</table>
+The mapped segments are mapped via a translation lookaside buffer
+(TLB) with software refill. The direct-mapped segments are mapped
+(without use of the TLB) both to the first 512 megabytes of the 
+physical memory space.
+Typically the kernel lives in kseg0, hardware devices are accessed
+through kseg1, any pageable kernel data lives in kseg2, and user-mode
+programs are run in kuseg.
+</p>
+
+<p>
+There are four MMU-related instructions:
+<ul>
+<li> <tt>TLBR</tt> uses the SLOT field of the INDEX register to choose
+a TLB entry, and reads it into the TLBLO and TLBHI registers.
+<li> <tt>TLBWI</tt> uses the SLOT field of the INDEX register to choose
+a TLB entry, and writes the TLBLO and TLBHI registers into it.
+<li> <tt>TLBWR</tt> uses the SLOT field of the RANDOM register to choose
+a TLB entry, and writes the TLBLO and TLBHI registers into it.
+<li> <tt>TLBP</tt> searches the TLB for an entry matching the TLBHI
+register, and sets the SLOT field of the INDEX register to its number,
+unless no entry was found, in which case the P field of the INDEX
+register is set to -1. (This makes the value of the INDEX register
+negative, which is easily tested.)
+</ul>
+The INDEX field of the RANDOM register ranges from 8 to 63; it is
+incremented on every instruction executed, which is not very random
+but apparently adequate for the purpose, which is to fill the TLB
+rapidly and effectively. Entries 0 through 7 of the TLB are never
+touched by <tt>TLBWR</tt> and can be used for reserved or special
+mappings.
+</p>
+
+<p>
+The processor is built to support a fast-path TLB refill handler,
+which is invoked via the UTLB exception vector (see above). The idea
+is that the OS maintains page tables in virtual memory using the kseg2
+region (see above) and loads the base address of the page table into
+the PTBASE field of the CONTEXT register. Each page table entry (PTE) is a
+4-byte quantity suitable for loading directly into the TLBLO register;
+1024 of these fit on a 4K page, so each page table page maps 4MB and
+it takes 512 pages, or 2MB of virtual space, to map the whole 2GB user
+address space. (Since these are placed in virtual memory, only the
+page table pages that are used need be materialized.) With this setup,
+the UTLB exception handler can then read the CONTEXT register and use
+the resulting value to load directly from the page table. If this
+fails because that section of the page table is not materialized, a
+second (non-UTLB) exception occurs. Careful register usage and the
+three-deep nesting of the bottom part of the STATUS register allows
+the general-purpose exception handler to recover from this condition
+and proceed as desired. On success, the UTLB handler can then
+unconditionally store the PTE it got into the TLBLO register and write
+it into the TLB with the TLBWR instruction. If the V (valid)
+bit is not set, on return from the UTLB handler another exception will
+occur; however, because a matching (though not valid) TLB entry
+exists, this will not be a UTLB exception, and the general exception
+handler will get control and can schedule pagein or whatever.
+</p>
+
+<p>
+There are a number of possible other ways to use the UTLB handler, of
+course. One simple way is to just have it jump to the general-purpose
+exception handler.
+</p>
+
+<p>
+As noted above, the V (valid) bit does not prevent a TLB entry from
+being "matching". A TLB entry is matching if both of the following are
+true:
+<ul>
+<li> The VPAGE of the entry matches the virtual address being
+     translated, and
+<li> either the ASID of the entry matches the ASID currently loaded
+     into the TLBHI register, or the entry has the G (global) flag
+     set.
+</ul>
+</p>
+
+<p>
+One must never load the TLB in such a fashion that two (or more)
+entries can match the same virtual address. If this happens, the
+processor shuts down and is unrecoverable except by hard reset.
+Since there is no way to prevent entries from matching, one should
+clear the TLB by loading each entry with a distinct VPAGE, and use
+VPAGEs from the kseg0 or kseg1 regions that will never be presented to
+the MMU for translation. To reset the TLB at startup, since it is not
+cleared by processor reset, one should use a second, potentially
+larger, set of distinct VPAGEs and check that each is not already
+present before loading it.
+</p>
+
+<p>
+There is no way to tell if a TLB entry has been used, or how recently
+it has been used. Nor is there a direct way to tell if a TLB entry has
+been used for writing. The D ("dirty") bit can be used for this
+purpose with software support, as follows:
+<ul>
+<li> When the TLB entry is first loaded, clear the D bit. This will
+     make the MMU treat the translation as read-only.
+<li> Upon a write, a MOD exception will occur. If writing through this
+     translation is legal, set the D bit in the TLB and anywhere else
+     in the virtual memory system data structures that might be
+     desired. The page is now dirty, and the processor will write to
+     it freely.
+<li> When the page is written back or otherwise cleaned, or on a
+     periodic basis to measure usage over time, flush the TLB entry or
+     reload it with the D bit clear again.
+</ul>
+</p>
+
+<p>
+The processor never changes the address space ID found in the ASID
+field of the TLBHI register.
+System software can switch among up to 64 address spaces by altering
+this value.
+(If more are needed, address space IDs can be reused by flushing TLB
+entries.)
+At the cost of performance, system software can also leave the ASID
+field set to a constant value and change address spaces by flushing
+the whole TLB.
+</p>
+
+<p>
+The MMU exceptions are as follows:
+<ul>
+<li> MOD -- attempt to write through a TLB entry whose D bit is not
+     set. Software should respond either by making the TLB entry
+     writable or treating the condition as a failure.
+<li> TLBL -- TLB miss (entry not present, or entry not valid) on a
+     data read. If the address was in kuseg and the entry was not
+     present, the UTLB handler is invoked. Otherwise the general
+     exception handler is invoked. The failing address is placed in
+     BADVADDR, and as noted above in the VSHIFT field of the CONTEXT
+     register. The VPAGE field of the TLBHI register is also loaded.
+     Software should respond by loading a matching and valid
+     translation, or treating the condition as a failure.
+<li> TLBS -- TLB miss on store. Otherwise the same as TLBL.
+<li> ADEL -- address error on load. An address error is either an
+     unaligned access or an attempt to access kernel memory while in
+     user mode. Software should respond by treating the condition as a
+     failure.
+<li> ADES -- same as ADEL, but for stores.
+</ul>
+
+<h3><font face=tahoma,arial,helvetica,sans>Cache Control</font></h3>
+
+<p>
+The MIPS-I has a remarkably painful cache and cache control
+architecture.
+This is not supported.
+Attempting to set either the "swap caches" or "isolate cache" bits in
+the STATUS register, as one does with a MIPS-I, will trigger a machine
+check.
+</p>
+
+<p>
+Currently, the MIPS-161 is fully cache-coherent (in fact, System/161
+does not model the cache at all) and there is no need to flush,
+examine, or otherwise touch the cache subsystem.
+However, future releases may include more cache handling; caches are
+an important part of performance modeling and storing predecoded
+instructions in an instruction cache will likely make things run faster.
+</p>
+
+<p>
+Since real MIPS processors have split instruction and data caches,
+flushing the instruction cache is required in certain contexts.
+As of this writing a MIPS32-compatible CONFIG1 register reporting the
+L1 cache configuration, and the matching CACHE instruction to
+flush and otherwise manipulate the caches, are implemented, but
+adequate documentation has not yet been written.
+</p>
+
+<p>
+It is recommended that code written for System/161 include stubbed-out
+calls for flushing the instruction cache in the places needed; this
+will allow such code to run with caching enabled on future versions
+with minimal modification.
+It is similarly recommended that such code also include stubbed-out
+calls for flushing or invalidating the data cache if there are any
+places where this is necessary.
+</p>
+
+<p>
+It is safe to assume that any future cache will be PIPT (physically
+indexed, physically tagged) -- because System/161 is an instructional
+tool, it attempts to avoid unnecessary student-facing complexity, and
+therefore VIPT (virtually indexed, physically tagged) or worse VIVT
+(virtually indexed, virtually tagged) caches are contraindicated.
+(Because it is an instructional tool, it might sometime include an
+optional VIPT or VIVT cache specifically for use teaching about the
+horrors; but if so this will be a configurable option, not the default
+mode.)
+</p>
+
+<p>
+Any future cache will also be coherent between processors;
+multiprocessor architectures with non-coherent caches are horrible to
+try to program.
+<!-- but what about data writes on other processors and the icache? -->
+</p>
+
+<p>
+In this setup, the instruction cache need only be flushed when
+something modifies physical memory containing instructions.
+Assuming no self-modifying code, this normally arises only in the
+virtual memory system when swapping in and out pages that contain
+code, or (where separate) when first loading executable code into
+memory.
+</p>
+
+<p>
+The data cache only needs to be flushed if hardware devices other than
+the CPU are accessing memory.
+In general, the cache must be flushed (in the sense of written back)
+before hardware reads memory the processor has written, and it must be
+flushed (in the sense of invalidated, to force a fresh read) before
+the processor reads memory the hardware has written.
+Since the hardware devices in System/161 do not support DMA (direct
+memory access) this will not normally arise.
+However, accessing the I/O buffers on LAMEbus devices with the cache
+enabled (through kseg0 instead of kseg1) will require flushing the
+data cache as just described.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Startup</font></h3>
+
+<p>
+On CPU reset execution begins from the Reset vector defined above.
+The processor starts out in an almost completely undefined state.
+The cache is in an undefined state (except on the MIPS-161 this does
+not matter...), the TLB is in an undefined state, and the contents of
+the general and kernel-mode registers are all undefined, except as
+follows:
+<ul>
+<li> The B (boot) flag of the STATUS register is set to 1, so
+     exceptions will go to the boot exception vectors in kseg1 instead
+     of the kernel exception vectors in kseg0.
+<li> The KUc and IEc bits of the STATUS register are set to 0, so the
+     processor is in kernel mode and interrupts are disabled.
+</ul>
+The code at the Reset vector must in general sort out the processor
+state before it can do anything else.
+</p>
+
+<p>
+In System/161, the boot ROM takes care of these issues and loads a
+kernel as described in the <A HREF=lamebus.html>LAMEbus
+documentation</A>. However, the state guaranteed by the boot ROM is
+only slightly more flexible: the boot ROM guarantees that the cache is
+in a workable state, and it provides a stack and an argument string in
+the a0 register. The TLB is still in an undefined state and the
+contents of other general and kernel-mode registers and register
+fields are still undefined.
+</p>
+
+<h3><font face=tahoma,arial,helvetica,sans>Identifying the
+Processor</font></h3>
+
+<p>
+Distinguishing the MIPS-161 from an arbitrarily chosen MIPS-I is
+likely to be problematic: according to the lore, the PRID register
+values for MIPS-I processors could not reliably be used to distinguish
+processor types even in real deployed hardware. The recommended method
+is to arrange to know that you have a MIPS-161 because you are running
+on System/161; then the scheme below can be used to identify which
+version you have. If this is not feasible, you're on your own. It
+might be possible to detect the MIPS-161 by enabling certain cache
+control bits and ascertaining that they have no effect.
+</p>
+
+<p>
+The System/161 1.x processor can be distinguished from the System/161
+2.x processor by fetching the value from the PRID register. The top
+half of the PRID register is 0 (because the MIPS-161 is not a MIPS32
+or MIPS64, doesn't have an official vendor ID, and isn't likely to get
+one) and the bottom half gives the version:
+<ul>
+<li> 0x3ff (1023) identifies System/161 1.x
+<li> 0xa1 (161) identifies System/161 2.x
+</ul>
+</p>
+
+<p>
+The processors in pre-2.0 versions of System/161 prior to 1.99.07 also
+report 0x3ff in the PRID register.
+These can be detected by checking the LAMEbus mainboard version; if
+the multiprocessor mainboard is present, the processor supports LL/SC
+and the on-chip timer
+<!-- XXX --> (not documented herein yet, alas)
+but are lacking SYNC, coprocessor register selects, the
+CFEAT/IFEAT registers, and any other features described above as
+2.x-only.
+Other than this, no guarantees are made about
+mainboard versions and features vs. CPU versions and features.
+Mainboard and CPU properties can be selected independently in
+<tt>sys161.conf</tt>.
+</p>
+
+<p>
+Some ancient prerelease versions of System/161 (0.95 and earlier)
+reported 0xbeef in the PRID register. These versions are now long gone
+and can be ignored. The documentation also for a long time described
+the PRID value for the System/161 1.x processor as 0xbeef; this was
+incorrect.
+</p>
+
+<p>
+CPU features beyond those found by default in the System/161 2.x
+processor should be probed by checking the CFEAT and IFEAT registers,
+after confirming that a System/161 2.x processor is in fact present.
+See the descriptions of these feature bits above. (So far, there are
+none.)
+</p>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+sys161: Tracing enabled: kinsn uinsn jump tlb exn irq 
+trace: 00 at 80000000: mfc0 $t8, $12: ... -> 0x400000
+trace: 00 at 80000004: lui $t7, 0xffbf
+trace: 00 at 80000008: ori $t7, $t7, 65535: 0xffbf0000 | 0xffff -> 0xffbfffff
+trace: 00 at 8000000c: and $t8, $t8, $t7: 0x400000 & 0xffbfffff -> 0x0
+trace: 00 at 80000010: mtc0 $t8, $12: 0x0 -> ...
+trace: 00 at 80000014: addiu $t0, $z0, 56232: 0 + -9304 -> -9304
+trace: 00 at 80000018: addiu $t1, $z0, 65458: 0 + -78 -> -78
+trace: 00 at 8000001c: bne $t1, $z0, 2: 4294967218!=0? yes
+trace: 00 jump: 8000001c -> 80000028
+trace: 00 at 8000001c: div $t0 $t1: -9304 / -78 -> 119, remainder -22
+trace: 00 at 80000028: addiu $at, $z0, 65535: 0 + -1 -> -1
+trace: 00 at 8000002c: bne $t1, $at, 4: 4294967218!=4294967295? yes
+trace: 00 jump: 8000002c -> 80000040
+trace: 00 at 8000002c: lui $at, 0x8000
+trace: 00 at 80000040: mflo $t0: ... -> 0x77
+trace: 00 at 80000044: sll $z0, $z0, 0: 0x0 << 0 -> 0x0
+trace: 00 at 80000048: sll $z0, $z0, 0: 0x0 << 0 -> 0x0
+trace: 00 at 8000004c: sll $z0, $z0, 0: 0x0 << 0 -> 0x0
+trace: 00 at 80000050: addiu $t7, $z0, 0: 0 + 0 -> 0
+trace: 00 at 80000054: lui $t8, 0xbffe
+trace: 00 at 80000058: ori $t8, $t8, 12: 0xbffe0000 | 0xc -> 0xbffe000c
+trace: 00 at 8000005c: sw $t7, 0($t8): 0 -> [0xbffe000c]
+sys161: ------------------------------------------------------------------------
+sys161: trace: dump with code 0 (0x0)
+sys161: mainloop: shutoff_flag 0 stopped_in_debugger 0
+sys161: Tracing enabled: kinsn uinsn jump tlb exn irq 
+sys161: gdb support: not active, listening at .sockets/gdb
+sys161: 0 cycles (0 run, 0 global-idle)
+sys161:   cpu0: 20 kern, 0 user, 0 idle; 0 ll, 0/0 sc, 0 sync
+sys161: 0 irqs 0 exns 0r/0w disk 0r/0w console 0r/0w/0m emufs 0r/0w net
+sys161: clock: No events pending
+sys161: 1 cpus: MIPS r3000
+sys161: cpu 0:
+sys161: r0:  0x00000000  r1:  0x80000000  r2:  0x00000000  r3:  0x00000000   
+sys161: r4:  0x80003ffc  r5:  0x00000000  r6:  0x00000000  r7:  0x00000000   
+sys161: r8:  0x00000077  r9:  0xffffffb2  r10: 0x00000000  r11: 0x00000000   
+sys161: r12: 0x00000000  r13: 0x00000000  r14: 0x00000000  r15: 0x00000000   
+sys161: r16: 0x00000000  r17: 0x00000000  r18: 0x00000000  r19: 0x00000000   
+sys161: r20: 0x00000000  r21: 0x00000000  r22: 0x00000000  r23: 0x00000000   
+sys161: r24: 0xbffe000c  r25: 0x00000000  r26: 0x00000000  r27: 0x00000000   
+sys161: r28: 0x00000000  r29: 0x80003ff8  r30: 0x00000000  r31: 0x00000000   
+sys161: lo:  0x00000077  hi:  0xffffffea  pc:  0x80000060  npc: 0x80000064
+sys161: TLB: index 0,  vpn 0x81000000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 1,  vpn 0x81001000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 2,  vpn 0x81002000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 3,  vpn 0x81003000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 4,  vpn 0x81004000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 5,  vpn 0x81005000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 6,  vpn 0x81006000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 7,  vpn 0x81007000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 8,  vpn 0x81008000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 9,  vpn 0x81009000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 10, vpn 0x8100a000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 11, vpn 0x8100b000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 12, vpn 0x8100c000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 13, vpn 0x8100d000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 14, vpn 0x8100e000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 15, vpn 0x8100f000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 16, vpn 0x81010000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 17, vpn 0x81011000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 18, vpn 0x81012000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 19, vpn 0x81013000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 20, vpn 0x81014000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 21, vpn 0x81015000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 22, vpn 0x81016000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 23, vpn 0x81017000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 24, vpn 0x81018000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 25, vpn 0x81019000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 26, vpn 0x8101a000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 27, vpn 0x8101b000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 28, vpn 0x8101c000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 29, vpn 0x8101d000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 30, vpn 0x8101e000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 31, vpn 0x8101f000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 32, vpn 0x81020000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 33, vpn 0x81021000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 34, vpn 0x81022000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 35, vpn 0x81023000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 36, vpn 0x81024000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 37, vpn 0x81025000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 38, vpn 0x81026000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 39, vpn 0x81027000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 40, vpn 0x81028000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 41, vpn 0x81029000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 42, vpn 0x8102a000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 43, vpn 0x8102b000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 44, vpn 0x8102c000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 45, vpn 0x8102d000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 46, vpn 0x8102e000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 47, vpn 0x8102f000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 48, vpn 0x81030000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 49, vpn 0x81031000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 50, vpn 0x81032000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 51, vpn 0x81033000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 52, vpn 0x81034000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 53, vpn 0x81035000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 54, vpn 0x81036000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 55, vpn 0x81037000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 56, vpn 0x81038000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 57, vpn 0x81039000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 58, vpn 0x8103a000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 59, vpn 0x8103b000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 60, vpn 0x8103c000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 61, vpn 0x8103d000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 62, vpn 0x8103e000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: index 63, vpn 0x8103f000, pid 0,  ppn 0x00000000 (---)
+sys161: TLB: tlbhi/lo, vpn 0x81040000, pid 0,  ppn 0x00000000 (---)
+sys161: tlb index: 0 
+sys161: tlb random: 26
+sys161: Status register: --------------------------------
+sys161: Cause register: - 0 -------- 0 [interrupt]
+sys161: VAddr register: 0x00000000
+sys161: Context register: 0x00000000
+sys161: EPC register: 0x00000000
+sys161: ************ Slot 0 ************
+sys161: System/161 timer device rev 1
+sys161:     0 microseconds, one-shot
+sys161:     Generation number: 0
+sys161: ************ Slot 30 ************
+sys161: System/161 trace control device rev 3
+sys161: ************ Slot 31 ************
+sys161: LAMEbus uniprocessor controller rev 2
+sys161:     ramsize: 16384 (16k)
+sys161:     irqs: 0x00000000
+sys161:     irqe: 0xffffffff
+sys161:     irqc: 0x00000000
+sys161: RAM:
+sys161:      0:40 18 60 00 3c 0f ff bf 35 ef ff ff 03 0f c0 24 @.`.<...5......$
+sys161:     10:40 98 60 00 24 08 db a8 24 09 ff b2 15 20 00 02 @.`.$...$.... ..
+sys161:     20:01 09 00 1a 00 07 00 0d 24 01 ff ff 15 21 00 04 ........$....!..
+sys161:     30:3c 01 80 00 15 01 00 02 00 00 00 00 00 06 00 0d <...............
+sys161:     40:00 00 40 12 00 00 00 00 00 00 00 00 00 00 00 00 ..@.............
+sys161:     50:24 0f 00 00 3c 18 bf fe 37 18 00 0c af 0f 00 00 $...<...7.......
+sys161:     60:00 00 00 00 3c 18 bf ff 37 18 7e 08 af 00 00 00 ....<...7.~.....
+sys161:     70:42 00 00 20 08 00 00 1c 00 00 00 00 00 00 00 00 B.. ............
+sys161:     80:01 00 83 02 00 00 00 00 00 00 00 00 00 00 00 00 ................
+sys161:        *
+sys161:   4000:
+sys161: trace: dump complete
+sys161: ------------------------------------------------------------------------
+trace: 00 at 80000060: sll $z0, $z0, 0: 0x0 << 0 -> 0x0
+trace: 00 at 80000064: lui $t8, 0xbfff
+trace: 00 at 80000068: ori $t8, $t8, 32264: 0xbfff0000 | 0x7e08 -> 0xbfff7e08
+trace: 00 at 8000006c: sw $z0, 0($t8): 0 -> [0xbfff7e08]
+trace: 00 at 80000070: wait
+trace: -- Waiting for interrupt
+trace: 00 cpu_set_irqs: LB ON IPI off
+trace: -- Slot 31: irq ON
+sys161: 125515 cycles (50000 run, 75515 global-idle)
+sys161:   cpu0: 25 kern, 0 user, 0 idle; 0 ll, 0/0 sc, 0 sync
+sys161: 0 irqs 0 exns 0r/0w disk 0r/0w console 0r/0w/0m emufs 0r/0w net
+sys161: Elapsed virtual time: 0.009310022 seconds (25 mhz)

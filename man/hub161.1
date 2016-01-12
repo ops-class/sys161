@@ -1,0 +1,44 @@
+.Dd January 5, 2015
+.Dt HUB161 1
+.Os System/161 2.x
+.Sh NAME
+.Nm hub161
+.Nd System/161 local interconnect
+.Sh SYNOPSIS
+.Nm hub161
+.Op Ar sockname
+.Sh DESCRIPTION
+The
+.Nm hub161
+program connects multiple local System/161 instances through their
+network devices.
+Each System/161 instance's network device should be configured to
+point to the
+.Nm hub161
+socket using the
+.Li hub=
+configuration directive in
+.Pa sys161.conf .
+Once started,
+.Nm hub161
+receives packets from connected System/161 instances and retransmits
+them to all other connected System/161 instances.
+A link-level keepalive protocol is used to track what connected
+instances exist.
+.Pp
+The optional
+.Ar sockname
+argument sets the socket path.
+.Sh FILES
+.Bl -tag -width .sockets/hub -compact
+.It Pa .sockets/hub
+The default socket path.
+.El
+.Sh SEE ALSO
+.Xr sys161 1
+.Sh BUGS
+The
+.Nm hub161
+program is a hub, not a switch; it forwards every packet to every
+connected instance and makes no attempt to dispatch packets
+selectively based on host addresses.

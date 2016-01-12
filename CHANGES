@@ -1,0 +1,283 @@
+20151222 dholland	System/161 2.0.4 released.
+20151222 dholland	Improve the way -X works.
+20151222 dholland	Make trace161 -h output include the trace flag list.
+20151222 dholland	Use shell printf instead of echo -n. Apparently Apple
+........		still ships a broken sh whose echo prints literal "-n".
+20151222 dholland	Apparently some Linux installs demand _GNU_SOURCE to
+........		be allowed to see/use ftruncate.
+20150808 dholland	Actually install the new prof.html. Sigh.
+........		(issued as patch for 2.0.3)
+
+20150804 dholland	System/161 2.0.3 released.
+20150714 dholland	Fix the serial port FORCE logic meant to prevent
+........		interrupt flapping. Thanks to Winnie Wu for a test
+........		kernel and workload that reliably repeated the problem.
+20150709 dholland	Recognize some obvious aliases for disk161 commands.
+20150706 dholland	Add page on profiling to the manual.
+20150706 dholland	Add dynamic profiling control to the trace device.
+20150703 dholland	If profiling, write the profile out if we die().
+20150703 dholland	Include seek times in disk activity trace output.
+
+20150126 dholland	System/161 2.0.2 released.
+20150126 dholland	Fix brown paper bag release. Sigh.
+20150126 dholland	System/161 2.0.1 released.
+20150121 dholland	Fix up some gdb threads issues appearing with gdb 7.8.
+20150117 dholland	Update included .hgignore file, from Cary Gray.
+
+20150115 dholland	System/161 2.0 released.
+20150115 dholland	Add workaround to make disk rotdelay deterministic.
+20150114 dholland	Fix stdint.h-related build problems on Linux.
+20150114 dholland	Fix flock-related build problem on Linux.
+20150109 dholland	Add software debugger requests to the trace device.
+20150105 dholland	Make the testsuite run.
+20150105 dholland	Add support for installing into a chroot/DESTDIR.
+20150105 dholland	Add man pages for all executables.
+
+20141209 dholland	System/161 1.99.10 released.
+20141209 dholland	Add workaround for OpenBSD's srand/srandom breakage.
+
+20140929 dholland	System/161 1.99.09 released.
+20140929 dholland	Support the CACHE instruction as (for now) a nop.
+20140929 dholland	Pretend to have 4K each L1 I/D caches.
+20140929 dholland	Provide the MIPS32 config0 and config1 registers.
+20140929 dholland	Edit/revise the processor docs.
+20140929 dholland	Don't allow attempts to do r3k-style cache flushes.
+20140929 dholland	Sort out status register definition going forward.
+20140925 dholland	Fix address space ID printouts. From Peter Bailis.
+20140925 dholland	Update disk config in sys161.conf.sample.
+20140925 dholland	Added disk161 utility for manipulating disk images.
+20140925 dholland	Warn if the size of a disk in sys161.conf is wrong.
+20140925 dholland	Take the size of a disk from its image file size.
+20140919 dholland	Fix build with gcc 4.8.
+20140919 dholland	Provide flock compat for legacy OSes like Solaris.
+
+20140821 dholland	System/161 1.99.08 released.
+20140807 dholland	Use flock() on disk images to avoid accidents.
+20140801 dholland	Improve gdb interface to treat cpus as "threads".
+20140730 dholland	Rework tty handling. Now behaves when backgrounded.
+20140730 dholland	Change sample disk image names to LHD{0,1}.conf.
+20140730 dholland	Retune main loop now that timing works. Much faster.
+20140730 dholland	Rework timing. Fix bogus large idle counts for real.
+20140729 dholland	Rework main loop. Tidier and noticeably faster.
+20140315 dholland	Handle EOF on input better, from Kevin Elphinstone.
+20140314 dholland	Use -Wstrict-prototypes -Wmissing-prototypes with gcc.
+20140123 dholland	Fix date on front page of docs.
+
+20140123 dholland	System/161 1.99.07 released.
+20140123 dholland	Add a -D option to enable a disk write doom counter.
+20140122 dholland	Skip ELF note sections; from Vincent Danjean.
+20131105 dholland	Change the processor ID value; discussion in docs.
+20131105 dholland	Add mips coprocessor register banks ("selects").
+20130530 dholland	Add a -X option to not hang waiting for the debugger.
+20130530 dholland	Print more sensible cycle counts with stat161.
+			(They are now totals across cpus, not averages.)
+20130530 dholland	Add a -Z timeout option for monitoring user progress.
+20130530 dholland	Count and report ll/sc and sync instructions.
+20130530 dholland	Make configure script no longer leave "a.out" behind.
+20130530 dholland	Purge ancient rcsid strings.
+20130530 dholland	Accept the SYNC (memory barrier) instruction.
+20130530 dholland	Have configure script check for _FILE_OFFSET_BITS=64.
+20130422 dholland	Tidy up the disk initialization code further.
+20130422 dholland	Fix missing initialization of dd_timedop in dev_disk.
+			(Reported by Keno Fischer.)
+
+20130422 dholland	System/161 1.99.06 released.
+20130422 dholland	Update download URL link provided in the docs.
+20130422 dholland	Fix one source of bogusly large idle cycle counts.
+20130306 dholland	Hack around C99 strict-aliasing issues.
+20130306 dholland	Fix build with gcc 4.5.
+20130306 dholland	Initialize emufs create op's isdir return properly.
+20130228 dholland	Doc fixes: typos, clarifications. Mention mips SYNC.
+
+20110126 dholland	System/161 1.99.05 released.
+20100819 dholland	Add a FORCE bit to the serial port device. See docs.
+
+20090414 dholland	System/161 1.99.04 released.
+20090414 dholland	Improve realism of disk timing model some.
+
+20090228 dholland	System/161 1.99.03 released.
+20090228 dholland	Fix time-handing bug that manifested under OS/161 2.x.
+20090210 dholland	In stat161, fix reconnection-related printout glitches.
+20090210 dholland	Improve interrupt/exception tracing.
+20090210 dholland	Fix build issue on NetBSD-current.
+
+20090206 dholland	System/161 1.99.02 released.
+20090206 dholland	Fix build glitch when building inside source tree.
+
+20090202 dholland	System/161 1.99.01 released.
+20090201 dholland	More build fixes for Linux, on amd64.
+20090201 dholland	Avoid doing (u_int32_t)1 << 32.
+20090201 dholland	Fix cpu cycle counters for multiple-cpu configs.
+20090201 dholland	Make debugger "see" whichever CPU hits a breakpoint.
+20090131 dholland	Build fixes for Linux.
+20090130 dholland	Make trace system handline multiple-cpu configs right.
+20090130 dholland	Fix trace macros to be C99 varargs macros.
+20090130 dholland	Make SELF register behave as documented.
+20090130 dholland	Make secondary CPU startup work.
+20090129 dholland	Add on-chip timer from MIPS32.
+20090129 dholland	Add ll/sc instructions. Haven't bumped CPU version id.
+20090126 dholland	Implement multiprocessor bus controller.
+20090126 dholland	Add interrupt masking register to (old) bus controller.
+			Bump (old) bus controller revision level to 2.
+20090123 dholland	Rework docs completely.
+20090123 dholland	Fix old nonstandard install layout.
+20090123 dholland	Begin reorg of makefiles and build system.
+
+20080627 dholland	System/161 1.14 released.
+20080627 dholland	Make it work with gdb 6.6.
+20080627 dholland	Fix broken build under NetBSD-current.
+
+20050913 dholland	System/161 1.13 released.
+20050826 dholland	Minor patches for clean build with gcc 4.0.1.
+20040430 dholland	Add -P, which was missing, to the usage message.
+
+20040415 dholland	System/161 1.12 released.
+20040415 dholland	Minor compile fixes for gcc >= 3.0.
+20040415 dholland	Fix bug in PC translation caching code.
+			(Thanks to Pat Swieskowski for crucial diagnosis info.)
+20040205 dholland	Fix botched configure test for the SUN_LEN macro.
+
+20040203 dholland	System/161 1.11 released.
+20040203 dholland	Support for building on Solaris.
+20040131 dholland	Fix to allow talking to gdb >= 5.0.
+			(From Melissa O'Neill of Harvey Mudd College.)
+20030201 dholland	Clarify some error messages.
+
+20030131 dholland	System/161 1.1 released.
+20030128 dholland	Fix one last test glitch.
+20030121 dholland	Clean up the mips regression tests.
+20030110 dholland	Minor fix to emufs tracing.
+20021120 dholland	Report more mips registers to gdb.
+20020917 dholland	Created this changelog from CVS log data.
+20020910 dholland	Install programs by version and make symlinks.
+20020910 dholland	Catch signals and flush the trace file before dying.
+20020910 dholland	C standards pedanticism to ward off gcc pedanticism.
+20020910 dholland	Make mips divide-by-zero handling match real h/w.
+20020909 dholland	Add metering interface and stat161.
+20020909 dholland	Fix two places in gdb code that leak a socket on error.
+20020904 dholland	Transparent profiling support.
+20020826 dholland	Doc fixes requested by last year's students.
+20020814 dholland	Various fixes to ant32 code.
+20020808 dholland	Update ant32 code; add instruction tracing.
+20020808 dholland	Fix error for when disk geometry initialization fails.
+20020808 dholland	Flush trace output upon hitting hang().
+20020528 dholland	Fix typo in kernel load error output.
+20020528 dholland	Make pasting into sys161 window not lose characters.
+20020528 dholland	Massive cleanup of console and trace I/O handling.
+20020523 dholland	Add the version to the usage message.
+
+20020502 dholland	System/161 1.00 released.
+20020501 dholland	Bug fix for net device.
+
+20020424 dholland	System/161 0.99 released.
+20020424 dholland	Make it so printing strings in gdb works again.
+
+20020321 dholland	System/161 0.98 released.
+20020321 dholland	Fix obscure mips MMU bugs.
+20020215 dholland	Fix the placeholder mips bootrom image.
+
+20020131 dholland	System/161 0.97 released.
+20020122 dholland	Latency modeling for network device.
+20020122 dholland	Defensive programming fixes for gdb code.
+20020122 dholland	Don't print in the 80th column of the trace file.
+20020121 dholland	Add support for readdir (ls) in emufs.
+20020117 dholland	Network device fixes.
+20020117 dholland	Random device portability fixes.
+20020117 dholland	Add configure option for place for sample conf file.
+20020117 dholland	Fix broken DU build.
+20020117 dholland	Check for sockaddr_un.sun_len at configure time.
+20020117 dholland	Check for "inline" keyword support at configure time.
+20020117 dholland	Adapt to new cs161-toolchain.
+20020103 dholland	Network device (and hub) fixes.
+20020103 dholland	Include trace161-only options in usage message.
+20011217 dholland	Correct the ant32 ELF archtecture code.
+
+20010912 dholland	System/161 0.96 released.
+20010722 dholland	Hardwire breakpoints into mips bootup-exception code.
+20010722 dholland	Change mips processor revision id to 0x3ff.
+20010722 dholland	Make mips mmu not issue silly double exceptions.
+20010721 dholland	Bug fix in disk timing code.
+20010721 dholland	Slow down emufs timings to match disk better.
+20010721 dholland	Correct and improve usage message.
+20010720 dholland	Implement parts of a mips testsuite.
+20010720 dholland	Provide sample sys161.conf.
+20010720 dholland	mips mmu code cleanup.
+20010720 dholland	Make gdb memory access path work right.
+20010720 dholland	Reject a second gdb connection politely.
+20010719 dholland	Add part of a mips regression suite.
+20010718 dholland	Add comprehensive state dump ability.
+20010717 dholland	mips: cache the RAM page for the PC for a huge speedup.
+20010717 dholland	Inline ram access in processor files for big speedup.
+20010713 dholland	Even faster mips instruction decoding.
+20010712 dholland	New faster event queue code.
+20010712 dholland	Faster mips instruction decoding (12% overall).
+20010711 dholland	Abolish bus_forward_interrupts() for a 3% speedup.
+20010711 dholland	Clean up mainloop code.
+20010711 dholland	Faster mips bitfield registers.
+20010710 dholland	Various small mips performance hacks (10-15% speedup).
+20010709 dholland	Reorganize docs, and install them properly.
+20010709 dholland	New trace control device.
+20010709 dholland	Cope with disk files that are the wrong size.
+20010709 dholland	Network device fixes for when no hwaddr specified.
+20010709 dholland	Make random device generate 32 random bits, not 31.
+20010709 dholland	Docs for hub161.
+20010709 dholland	Make hub161 more careful about unlinking sockets.
+20010706 dholland	Update ant32 code.
+20010705 dholland	Add support for the broken ant32 on-chip timer.
+20010621 dholland	Update ant32 code.
+20010621 dholland	Diagnose duplicate TLB entries better.
+20010608 dholland	More tracing types: emufs, net packets, jumps/branches.
+20010607 dholland	More tracing types: interrupts and disk ops.
+20010607 dholland	Replace screwed-up disk latency modeling code.
+20010606 dholland	More tracing types: TLB operations.
+20010606 dholland	New switchable tracing modes.
+20010605 dholland	Network device implementation; add hub161.
+20010605 dholland	Allow configuring with --debug for debugging sys161.
+20010604 dholland	New makefiles and build system.
+20010604 dholland	Use -W as well as -Wall with gcc.
+20010604 dholland	New -s option to pass ^C, ^Z, etc. through to kernel.
+20010604 dholland	Use SO_REUSEADDR with gdb sockets.
+20010604 dholland	Print network I/O stats.
+20010507 dholland	Update ant32 code.
+
+20010419 dholland	System/161 0.95 released.
+20010419 dholland	Add recovery code for disk geometry modeling screwups.
+20010419 dholland	Print elapsed virtual time at shutdown.
+20010414 dholland	Cosmetic fixes to trace161 output.
+20010411 dholland	Fix incorrect device id number in docs.
+20010319 dholland	Simple latency modeling for emufs.
+
+20010319 dholland	System/161 0.94 released.
+20010319 dholland	Print emufs I/O stats.
+20010315 dholland	Update docs for network device.
+20010315 dholland	Fix gcc warning.
+20010315 dholland	Bug fix for emufs.
+20010315 dholland	Hack mips TLB initialization to work around OS/161 bug.
+20010315 dholland	Detect duplicate TLB entries.
+20010309 moorthi	Revised disk latency modeling code.
+
+20010308 dholland	System/161 0.93 released.
+20010228 dholland	Fix bug tracing mips "ori" instruction.
+20010227 dholland	Fix docs so the mips memory map matches the code.
+20010226 dholland	Changes so one can debug/resume after causing a hang().
+20010226 dholland	Drop into the debugger when ^G is pressed.
+20010226 dholland	Better argument handling.
+20010226 dholland	Minor doc edits.
+20010226 dholland	Trap mips division by zero.
+20010224 dholland	Add msgl(), to do msg() without implying a newline.
+20010224 dholland	Made mips instruction tracing much more verbose.
+20010214 dholland	Make stats printout work on DU.
+
+20010212 dholland	System/161 0.92 released.
+20010212 dholland	Bug fix: don't crash using unimplemented devices.
+20010212 dholland	Minor doc edits.
+20010209 dholland	Print a message when waiting for a debugger connection.
+
+20010208 dholland	System/161 0.91 released.
+20010208 dholland	Clock fixes.
+20010208 moorthi	Added random jitter to hardware latency.
+20010208 dholland	Adjust casts in mips code for proper sign behavior.
+20010207 dholland	Print version string at startup.
+20010206 dholland	Fix mips "sltiu" instruction.
+
+20010202 dholland	System/161 0.90 released.

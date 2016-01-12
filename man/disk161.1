@@ -1,0 +1,81 @@
+.Dd January 5, 2015
+.Dt DISK161 1
+.Os System/161 2.x
+.Sh NAME
+.Nm disk161
+.Nd System/161 disk utility
+.Sh SYNOPSIS
+.Nm disk161
+create
+.Op Fl f
+.Ar filename
+.Ar size
+.Nm disk161
+info
+.Ar filename ...
+.Nm disk161
+resize
+.Ar filename
+.Ar delta-size
+.Sh DESCRIPTION
+The
+.Nm disk161
+utility manages System/161 disk images.
+.Bl -tag -width createzz
+.It Dv create
+When run with the
+.Dv create
+command, it creates a new disk image of the requested size.
+Unless the
+.Fl f
+(force) option is given,
+.Nm disk161
+will not erase or clobber an already-existing file.
+.It Dv info
+When run with the
+.Dv info
+command,
+.Nm disk161
+prints information about one or more disk image files.
+.It Dv resize
+When run with the
+.Dv resize
+command,
+.Nm disk161
+changes the size of an existing disk image file by the requested
+amount
+.Ar delta-size ,
+which may be positive or negative.
+Note that
+.Nm disk161
+changes the physical size of the disk; if the disk image contains a
+file system or other data, one must also take file-system-level steps
+to resize the logical structure.
+In particular, shrinking a disk image without first shrinking the file
+system on it will throw away data and often fatally corrupt the file
+system.
+.El
+.Pp
+The
+.Ar size
+and
+.Ar delta-size
+values may be given in bytes (plain number, or "b" suffix),
+sectors ("s" suffix),
+kilobytes ("K" suffix),
+or (traditional) megabytes and gigabytes ("M" and "G" suffixes
+respectively);
+sizes must be a multiple of the sector size, which is 512 bytes.
+.Pp
+Note that System/161 disk images contain a 1-sector header with a
+signature string; this is to help prevent accidents.
+.Sh SEE ALSO
+.Xr sys161 1
+.Sh BUGS
+System/161 only supports native System/161 disk images, which are
+plain raw images with a 512-byte header.
+It would be helpful to support compression and possibly other more
+advanced formats, such as the
+.Xr qemu 1
+.Dv qcow2
+format.

@@ -1,0 +1,1 @@
+    mipseb              MIPS r2000/r3000 (big-endian)

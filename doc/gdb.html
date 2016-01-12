@@ -1,0 +1,85 @@
+<html>
+<head>
+<title>Kernel Debugging with gdb</title>
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#000066" vlink="#0000aa">
+<!-- "#36648b" --> 
+<!-- "#8b008b" -->
+
+<h2 align=center>
+<font face=tahoma,arial,helvetica,sans color=#000066>
+Kernel Debugging with <tt>gdb</tt>
+</font></h2>
+
+<p>
+System/161 supports remote <tt>gdb</tt> debugging directly into the
+simulator. The simulator acts like an in-circuit emulator (ICE), only
+more so, so that you can debug without any interference whatsoever
+with the debugged code. Even timing is unaffected.
+</p>
+
+<p>
+To do this, you need a copy of <tt>gdb</tt> compiled for the same
+processor that System/161 is simulating, and that understands the ELF
+kernel file format loaded by System/161. To use the Unix-domain
+sockets method shown below, you need a patch to <tt>gdb</tt>; without
+that you are restricted to using Internet-domain sockets and you can't
+necessarily control who can connect. A suitable <tt>gdb</tt>
+configuration is provided for OS/161.
+</p>
+
+<p>
+Run <tt>gdb</tt> as you normally would:
+<pre>
+	gdb kernel
+</pre>
+</p>
+
+<p>
+After it finishes loading, attach to System/161 by typing this into
+<tt>gdb</tt>:
+<pre>
+	target remote unix:.sockets/gdb
+</pre>
+and <tt>gdb</tt> will connect up to the copy of System/161 you have running in
+the same directory and you can start debugging. (You can debug one in
+another directory by specifying the right path to its socket.)
+</p>
+
+<p>
+Since this is a painful thing to type every time you want to debug, we
+recommend you create a shortcut for it. Put the following in a file
+called <tt>.gdbinit</tt> in the same directory you're working in.
+(<tt>gdb</tt> runs this file when you start it up.)
+<pre>
+	define db
+	target remote unix:.sockets/gdb
+	end
+</pre>
+Then you can connect up to System/161 for debugging just by running
+<tt>gdb</tt> and typing "db".
+</p>
+
+<p>
+If you give System/161 the <em>-w</em> option, it will stop and wait
+for a debugger connection before it runs anything at all. This allows
+you to start debugging from the very beginning of kernel
+initialization.
+</p>
+
+<p>
+Theoretically everything you can do with <tt>gdb</tt> normally should
+work with <tt>gdb</tt> connected this way. In practice, there are
+probably some problems.  Bring them to the attention of the course
+staff and we'll see if we can get them fixed.
+</p>
+
+<p>
+When System/161 is running, if you type ^G (control-G) into its
+window, it will immediately stop in <tt>gdb</tt> (if <tt>gdb</tt> is
+attached) or wait for a <tt>gdb</tt> connection (if <tt>gdb</tt> is
+not attached).
+</p>
+
+</body>
+</html>

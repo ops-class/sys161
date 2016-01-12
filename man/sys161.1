@@ -1,0 +1,199 @@
+.Dd January 5, 2015
+.Dt SYS161 1
+.Os System/161 2.x
+.Sh NAME
+.Nm sys161, trace161
+.Nd System/161 machine simulator
+.Sh SYNOPSIS
+.Nm sys161
+.Op Fl c Ar config
+.Op Fl D Ar doom
+.Op Fl p Ar port
+.Op Fl swX
+.Op Fl Z Ar timeout
+.Ar kernel
+.Op Ar kernel-arguments ...
+.Nm trace161
+.Op Fl c Ar config
+.Op Fl D Ar doom
+.Op Fl p Ar port
+.Op Fl swX
+.Op Fl Z Ar timeout
+.Op Fl f Ar tracefile
+.Op Fl P
+.Op Fl t Ar traceflags
+.Ar kernel
+.Op Ar kernel-arguments ...
+.Sh DESCRIPTION
+The System/161 machine simulator provides up to 32 32-bit MIPS
+processors in a simplified hardware environment suitable for teaching
+or low-level experimentation.
+(Please see the full manual for programming and configuration
+information.)
+Use
+.Nm sys161
+for regular operation, including debugging with
+.Xr gdb 1 .
+The
+.Nm trace161
+program should be run instead when accessing certain expensive
+functionality that makes the CPU code run slower.
+.Sh OPTIONS
+The first argument not beginning with a dash is treated as the
+.Ar kernel
+image to load and execute.
+Anything following the kernel name on the command line is concatenated
+together and provided to the kernel as the boot argument string.
+With suitable kernel support it is therefore possible to choose tests
+or programs to run directly from the System/161 command line.
+.Pp
+The supported options (coming before the kernel name) are:
+.Bl -tag -width blablablabla -offset indent
+.It Fl c Ar config
+Specify the config file to read.
+The default is
+.Pa sys161.conf .
+.It Fl D Ar doom
+Set the
+.Dq doom counter .
+After the selected number of writes to non-exempted disk devices, the
+machine shuts itself off.
+This is useful for testing file systems.
+.It Fl f Ar tracefile
+This option is accepted only when running
+.Nm trace161
+and chooses the destination for trace output.
+Note that when tracing to a file the the trace output is slightly
+different in order to better allow cross-referencing trace output and
+regular machine output.
+.It Fl p Ar port
+Listen on the selected TCP port for connections from
+.Xr gdb 1 .
+Note that unless firewalled or otherwise filtered, this allows anyone
+anywhere to connect a debugger to your System/161 process and do
+virtually anything with it; it is not safe except in a carefully
+controlled environment.
+By default, System/161 listens on the local socket
+.Pa .sockets/gdb
+instead.
+(This, however, requires corresponding patches to
+.Xr gdb 1
+to teach it to talk to local filesystem sockets.)
+.It Fl P
+This option is accepted only when running
+.Nm trace161
+and enables kernel profiling.
+At shutdown time, a profile dump is written to the file
+.Pa gmon.out
+suitable for use with the
+.Xr gprof 1
+utility.
+Note that because the profile collector is integrated with the CPU
+model, its timings are much more precise than
+.Xr gprof 1
+expects; you can safely tell gprof to use several more significant
+figures than it normally does.
+.It Fl s
+Do not allow keyboard/terminal signals (such as control-C) to affect
+System/161 itself; instead send the corresponding keystrokes to the
+guest kernel running inside System/161.
+Since System/161 is intended for teaching and experimentation, not
+production use, and it is much more common to want to interrupt a
+broken guest kernel than to interrupt a program running on the guest
+kernel, the default is to allow these key combinations to kill
+System/161.
+.It Fl t Ar traceflags
+This option is accepted only when running
+.Nm trace161
+and sets the trace flags to use.
+Each flag enables a different set of trace points.
+The trace flags are:
+.Bl -tag -width bla -offset indent
+.It k
+Trace kernel instructions.
+.It u
+Trace user instructions.
+.It j
+Trace jumps.
+.It t
+Trace TLB / MMU operations.
+.It x
+Trace exceptions.
+.It i
+Trace interrupts.
+.It d
+Trace disk activity.
+.It n
+Trace network activity.
+.It e
+Trace
+.Em emufs
+operations.
+.El
+Note that tracing instructions both is slow and generates extremely
+voluminous output.
+Sometimes, however, it is the best way to hunt a bizarre bug...
+.It Fl w
+Wait for a debugger connection before beginning to execute the kernel.
+.It Fl X
+By default, System/161 drops to the debugger (waiting for a debugger
+connection if no debugger is already connected) on various adverse
+conditions.
+If the
+.Fl X
+option is given, it exits with an error message instead of dropping to
+the debugger.
+This is useful for unattended testing runs.
+.It Fl Z Ar timeout
+Monitor kernel execution and check for progress.
+Progress is defined as successfully retiring at least one instruction
+in user mode.
+The
+.Ar timeout
+is measured in seconds.
+If this much (virtual) time elapses with no progress, a warning is
+printed; if the same amount of time then elapses again with still no
+progress, System/161 drops to the debugger.
+(Or, if the
+.Fl X
+option is in effect, exits with an error message.)
+This is useful for unattended testing runs.
+.Pp
+Note that while this mode is intended to catch unwanted deadlock,
+livelock, and infinite loop states, it will equally also trigger if
+the guest system is sitting at a prompt waiting for input.
+Furthermore, because execution within the kernel is not counted as
+progress, it should not be used in connection with purely in-kernel
+tests.
+.El
+.Sh FILES
+.Bl -tag -width blablablablablabla -compact
+.It Pa sys161.conf
+The default configuration file.
+.It Pa gmon.out
+The file name used when generating a kernel execution profile.
+.It Pa .sockets/gdb
+The socket used by default for communicating with the debugger.
+.It Pa .sockets/meter
+The socket used to communicate with
+.Xr stat161 1 .
+.It Pa .sockets/hub
+The socket used by default by the network device to communicate with
+.Xr hub161 1 .
+.It Pa .sockets/net-ABCD
+The source address socket used to send to
+.Xr hub161 1 ,
+where ABCD is the network device's hardware address.
+.El
+.Sh SEE ALSO
+.Xr disk161 1 ,
+.Xr hub161 1 ,
+.Xr stat161 1
+.Sh BUGS
+The
+.Nm sys161
+and
+.Nm trace161
+programs differ only by compile-time conditionals in the MIPS CPU code.
+It would be better to have one executable that chooses which of two
+compiled copies of that code to run based on the command-line options.
