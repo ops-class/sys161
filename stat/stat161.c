@@ -16,6 +16,9 @@
 #define PATH_SOCKET	".sockets/meter"
 #define PROTO_VERSION	1
 
+/* Default statistics interval (0.2s). */
+int interval = 200000000;
+
 struct field {
 	uint64_t lastval;
 	unsigned width;
@@ -200,7 +203,14 @@ dometer(int s)
 {
 	char buf[4096], *x;
 	size_t bufpos=0;
-	int r;
+	int r, l;
+
+	snprintf(buf, sizeof(buf), "INTERVAL %d\n", interval);
+	r = write(s, buf, strlen(buf));
+	if (r<0) {
+		fprintf(stderr, "stat161: write: %s\n", strerror(errno));
+		return;
+	}
 
 	while (1) {
 		assert(bufpos<=sizeof(buf));
@@ -287,9 +297,40 @@ loop(void)
 	}
 }
 
-int
-main(void)
+////////////////////////////////////////////////////////////
+// main
+
+static
+void
+usage(void)
 {
+	fprintf(stderr, "Usage: stat161 [-i interval]\n");
+	fprintf(stderr, "   -i interval    Set data reporting interval in s (default 0.2)\n");
+	exit(3);
+}
+
+int
+main(int argc, char *argv[])
+{
+	int opt;
+	float interval_sec;
+
+	while ((opt = getopt(argc, argv, "i:"))!=-1) {
+		switch (opt) {
+		    case 'i':
+					interval_sec = atof(optarg);
+					// Float equality is a bit funny.
+					if (interval_sec > 1.0 || interval_sec < 0.000009999) {
+						fprintf(stderr, "Invalid -i option (max 1.0, min 0.00001)\n");
+						exit(1);
+					}
+					interval_sec *= 1000 * 1000 * 1000;
+					interval = (int) interval_sec;
+					break;
+				default:
+						usage();
+		}
+	}
 	signal(SIGPIPE, SIG_IGN);
 	loop();
 	return 0;

@@ -1,3 +1,4 @@
+20160113 gwa		Add interval support for stat161.
 20160108 dholland	Print why if disk geometry initializion fails.
 20160105 dholland	Standardize and document the exit codes.
 20160105 dholland	Allow K, M, etc. suffixes for disk/memory sizes.

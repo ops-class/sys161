@@ -23,7 +23,7 @@ The following messages are sent from the server to the client:
 
 The following messages are sent from client to the server:
 
-	 INTERVAL [number]   
+	 INTERVAL [number]
 
 The ERROR message indicates that something is wrong on System/161's
 end. The connection is then terminated.

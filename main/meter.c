@@ -43,10 +43,10 @@ meter_header(struct meter *m)
 {
 	char buf[4096];
 	snprintf(buf, sizeof(buf), 
-		 "HEAD kern user idle kinsns uinsns irqs exns disk con emu net nsec\r\n");
+		 "HEAD nsec kern user idle kinsns uinsns irqs exns disk con emu net\r\n");
 	write(m->fd, buf, strlen(buf));
 	snprintf(buf, sizeof(buf),
-		 "WIDTH 9 9 9 7 7 4 4 4 5 4 4 11\r\n");
+		 "WIDTH 11 9 9 9 7 7 4 4 4 5 4 4\r\n");
 	write(m->fd, buf, strlen(buf));
 }
 
@@ -90,7 +90,7 @@ meter_report(struct meter *m)
 	Assert(kretired <= kcycles);
 	Assert(uretired <= ucycles);
 #endif
-	
+
 	secs = 0;
 	nsecs = 0;
 	clock_offset((uint32_t *)&secs, (uint32_t *)&nsecs);
@@ -103,15 +103,16 @@ meter_report(struct meter *m)
 		 (unsigned long long) kretired,
 		 (unsigned long long) uretired);
 
-	snprintf(buf, sizeof(buf), "DATA %s %lu %lu %lu %lu %lu %lu %llu\r\n",
+	snprintf(buf, sizeof(buf), "DATA %llu %s %lu %lu %lu %lu %lu %lu\r\n",
+		 (unsigned long long) nsecs,
 		 buf2,
 		 (unsigned long) g_stats.s_irqs,
 		 (unsigned long) g_stats.s_exns,
 		 (unsigned long) (g_stats.s_rsects + g_stats.s_wsects),
 		 (unsigned long) (g_stats.s_rchars + g_stats.s_wchars),
-		 (unsigned long) (g_stats.s_remu + g_stats.s_wemu + g_stats.s_memu),
-		 (unsigned long) (g_stats.s_rpkts + g_stats.s_wpkts),
-		 (unsigned long long) nsecs);
+		 (unsigned long) (g_stats.s_remu + g_stats.s_wemu + 
+				  g_stats.s_memu),
+		 (unsigned long) (g_stats.s_rpkts + g_stats.s_wpkts));
 
 	write(m->fd, buf, strlen(buf));
 }
@@ -130,7 +131,7 @@ meter_update(void *x, uint32_t junk)
 	}
 
 	meter_report(m);
-	schedule_event(meter_interval * 1000, m, 0, meter_update, "perfmeter");
+	schedule_event(meter_interval, m, 0, meter_update, "perfmeter");
 }
 
 static
