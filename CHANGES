@@ -1,3 +1,9 @@
+20160108 dholland	Print why if disk geometry initializion fails.
+20160105 dholland	Standardize and document the exit codes.
+20160105 dholland	Allow K, M, etc. suffixes for disk/memory sizes.
+20160105 dholland	Make the trace device reject (vs. ignore) invalid args.
+20160105 dholland	Add -C option to supply device config arguments.
+
 20151222 dholland	System/161 2.0.4 released.
 20151222 dholland	Improve the way -X works.
 20151222 dholland	Make trace161 -h output include the trace flag list.

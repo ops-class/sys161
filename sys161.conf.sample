@@ -143,14 +143,14 @@
 
 1	emufs
 
-2	disk	rpm=7200	sectors=10240	file=LHD0.img   nodoom
-3	disk	rpm=7200	sectors=10240	file=LHD1.img
+2	disk	rpm=7200	size=5M 	file=LHD0.img   nodoom
+3	disk	rpm=7200	size=5M 	file=LHD1.img
 
 #27	nic hwaddr=1
 
 28	random	autoseed
 29	timer
 30	trace
-31	mainboard  ramsize=524288  cpus=1
-#31	mainboard  ramsize=524288  cpus=2
-#31	mainboard  ramsize=524288  cpus=4
+31	mainboard  ramsize=512K  cpus=1
+#31	mainboard  ramsize=512K  cpus=2
+#31	mainboard  ramsize=512K  cpus=4

@@ -7,3 +7,4 @@
 
 void *domalloc(size_t);
 void dohexdump(const char *buf, size_t len);
+off_t getsize(const char *str);

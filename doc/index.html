@@ -19,7 +19,7 @@ System/161 2.x Software and Hardware Manual
 <font size=+1 color=#36648b>
 David A. Holland
 <br>
-July 6, 2015
+January 5, 2016
 </font>
 
 </font>
@@ -93,6 +93,14 @@ The <em>System/161 options</em> are:
 
 <dt>-c <em>configfile</em></dt>
 <dd>Specify alternate config file. Default is <tt>sys161.conf</tt>.</dd>
+
+<dt>-C <em>slot:arg</em></dt>
+<dd>Supply additional config argument to the device in the given slot.
+Applied after the config file is loaded, so values passed on the
+command line override values in the config file. Note that for now at
+least you cannot change the device mappings on the command line, only
+adjust arguments. The most common use of this option is probably to
+adjust the system memory size and/or CPU count.</dd>
 
 <dt>-D <em>count</em></dt>
 <dd>Enable the doom counter. After the specified number of disk
@@ -181,6 +189,37 @@ System/161 is compiled to support. For further information, see below.
 <p>
 Note that options found after the kernel name will be passed to the
 kernel and not interpreted by System/161.
+</p>
+
+<p>
+As of version 2.0.5 the exit codes produced by System/161 are
+specified as follows:
+<blockquote>
+<dl>
+<dt>0</dt>
+<dd>Ordinary shutdown.</dd>
+<dt>1</dt>
+<dd>Crash shutdown caused by software failure.</dd>
+<dt>2</dt>
+<dd>Configuration, user, or runtime errors.</dd>
+<dt>3</dt>
+<dd>Explicit request: doom counter or debugger kill.</dd>
+</dl>
+</blockquote>
+Note that in general software failures cannot reliably be
+distinguished from ordinary shutdowns.
+The crash shutdown exit code will be generated in the following cases:
+<ul>
+<li>Exits taken when the -X option is in use, e.g. from illegal
+hardware operations or from a -Z timeout.
+(When -X is not in effect, these events stop and wait for a debugger
+connection.)</li>
+<li>System power-off, if at least one explicit debugger request was
+made via the trace device.
+With recent versions of OS/161 this normally means a kernel panic
+occurred; but note that nothing guarantees a panic will necessarily
+trigger such a request.</li>
+</ul>
 </p>
 
 <A NAME=disks>

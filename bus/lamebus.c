@@ -567,7 +567,7 @@ lamebus_commonmainboard_init(int isold, int slot, int argc, char *argv[])
 
 	for (i=1; i<argc; i++) {
 		if (!strncmp(argv[i], "ramsize=", 8)) {
-			bus_ramsize = strtoul(argv[i]+8, NULL, 0);
+			bus_ramsize = getsize(argv[i]+8);
 		}
 		else if (!isold && !strncmp(argv[i], "cpus=", 5)) {
 			tmp_ncpus = strtoul(argv[i]+5, NULL, 0);
@@ -760,13 +760,31 @@ find_dev(const char *name)
  */
 #define MAXARGS 128
 unsigned
-bus_config(const char *configfile)
+bus_config(const char *configfile,
+	   const char *configextra[], unsigned numconfigextra)
 {
 	char *s;
 	const struct bus_device *dev;
 	char buf[1024], *argv[MAXARGS];
 	int argc, slot, line=0;
-	FILE *f = fopen(configfile, "r");
+	unsigned i;
+	FILE *f;
+
+	for (i=0; i<numconfigextra; i++) {
+		s = strchr(configextra[i], ':');
+		Assert(s);
+		*s = 0;
+		slot = atoi(configextra[i]);
+		if (slot < 0 || slot >= LAMEBUS_NSLOTS) {
+			*s = ':';
+			msg("-C %s: Invalid slot number (0-31 allowed)",
+			    configextra[i]);
+			die();
+		}
+		*s = ':';
+	}
+
+	f = fopen(configfile, "r");
 	if (!f) {
 		msg("Cannot open config file %s", configfile);
 		die();
@@ -815,6 +833,28 @@ bus_config(const char *configfile)
 			    configfile, line, slot, argv[1]);
 			die();
 		}
+
+		for (i=0; i<numconfigextra; i++) {
+			if (configextra[i] == NULL) {
+				continue;
+			}
+			s = strchr(configextra[i], ':');
+			Assert(s != NULL);
+			*s = 0;
+			if (atoi(configextra[i]) == slot) {
+				if (argc >= MAXARGS) {
+					*s = ':';
+					msg("-S %s: too many args for "
+					    "this slot", configextra[i]);
+					die();
+				}
+				argv[argc++] = s+1;
+				configextra[i] = NULL;
+			}
+			else {
+				*s = ':';
+			}
+		}
 		
 		{
 			int isbus = dev->dev_iscontroller;
@@ -836,6 +876,14 @@ bus_config(const char *configfile)
 	}
 	
 	fclose(f);
+
+	for (i=0; i<numconfigextra; i++) {
+		if (configextra[i] == NULL) {
+			continue;
+		}
+		msg("-C %s: No device in that slot", configextra[i]);
+		die();
+	}
 	
 	if (bus_ramsize == 0) {
 		msg("config %s: No system memory", configfile);

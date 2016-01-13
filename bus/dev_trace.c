@@ -24,9 +24,12 @@ static
 void *
 trace_init(int slot, int argc, char *argv[])
 {
-	(void)argc;
 	(void)argv;
-	(void)slot;
+
+	if (argc != 1) {
+		msg("trace: slot %d: Invalid argument %s", slot, argv[1]);
+		die();
+	}
 
 	return NULL;
 }
@@ -93,6 +96,7 @@ trace_store(unsigned cpunum, void *data, uint32_t offset, uint32_t val)
 		break;
 	    case TRACEREG_STOP:
 		msg("trace: software-requested debugger stop");
+		main_note_debugrequest();
 		cpu_stopcycling();
 		main_enter_debugger(0 /* not lethal */);
 		break;

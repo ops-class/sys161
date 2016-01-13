@@ -18,11 +18,13 @@ void console_beep(void);
 void console_putc(int ch);
 void console_onkey(void *, void (*func)(void *, int));
 
-void die(void) DEAD;
-void msg(const char *fmt, ...) PF(1,2);    /* general messages */
-void msgl(const char *fmt, ...) PF(1,2);   /* msg w/o newline */
-void smoke(const char *fmt, ...) PF(1,2) DEAD; /* for internal errors */
-void hang(const char *fmt, ...) PF(1,2);   /* for errors programming the hw */
+DEAD void die(void);                       /* for config/user/runtime errors */
+DEAD void crashdie(void);                  /* for software errors */
+DEAD void reqdie(void);                    /* for explicit exit requests */
+PF(1,2) void msg(const char *fmt, ...);    /* general messages */
+PF(1,2) void msgl(const char *fmt, ...);   /* msg w/o newline */
+DEAD PF(1,2) void smoke(const char *fmt, ...); /* for internal errors */
+PF(1,2) void hang(const char *fmt, ...);   /* for errors programming the hw */
 
 void console_pause(void);
 

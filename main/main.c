@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "config.h"
 
+#include "exitcodes.h"
 #include "util.h"
 #include "console.h"
 #include "trace.h"
@@ -36,6 +37,9 @@ static int shutoff_flag;
 static int stopped_in_debugger;
 static int stop_is_lethal;
 static int no_debugger_wait;
+
+/* Did we get an explicit debugger request? */
+static int got_debugrequest;
 
 /*
  * Event dispatching model, as of 20140730:
@@ -82,6 +86,12 @@ static int no_debugger_wait;
  * however, there is no need to call cpu_stopcycling() in connection
  * with it.
  */
+
+void
+main_note_debugrequest(void)
+{
+	got_debugrequest = 1;
+}
 
 void
 main_poweroff(void)
@@ -351,6 +361,7 @@ usage(void)
 	msg("Usage: sys161 [sys161 options] kernel [kernel args...]");
 	msg("   sys161 options:");
 	msg("     -c config      Use alternate config file");
+	msg("     -C slot:arg    Override config file argument");
 	msg("     -D count       Set disk I/O doom counter");
 #ifdef USE_TRACE
 	msg("     -f file        Trace to specified file");
@@ -361,7 +372,6 @@ usage(void)
 #endif
 	msg("     -p port        Listen for gdb over TCP on specified port");
 	msg("     -s             Pass signal-generating characters through");
-	msg("     -S usec        Set stat reporting interval");
 #ifdef USE_TRACE
 	msg("     -t[kujtxidne]  Set tracing flags");
 	print_traceflags_usage();
@@ -374,11 +384,15 @@ usage(void)
 	die();
 }
 
+#define MAXCONFIGEXTRA 128
+
 int
 main(int argc, char *argv[])
 {
 	int port = 2344;
 	const char *config = "sys161.conf";
+	const char *configextra[MAXCONFIGEXTRA];
+	unsigned numconfigextra = 0;
 	const char *kernel = NULL;
 	int usetcp=0;
 	char *argstr = NULL;
@@ -387,7 +401,6 @@ main(int argc, char *argv[])
 	int debugwait=0;
 	int pass_signals=0;
 	int timeout;
-	int interval;
 #ifdef USE_TRACE
 	int profiling=0;
 #endif
@@ -405,9 +418,20 @@ main(int argc, char *argv[])
 		die();
 	}
 
-	while ((opt = mygetopt(argc, argv, "c:D:f:p:PsS:t:wXZ:"))!=-1) {
+	while ((opt = mygetopt(argc, argv, "c:C:D:f:p:Pst:wXZ:"))!=-1) {
 		switch (opt) {
 		    case 'c': config = myoptarg; break;
+		    case 'C':
+			if (numconfigextra >= MAXCONFIGEXTRA) {
+				msg("Too many -C options");
+				die();
+			}
+			if (strchr(myoptarg, ':') == NULL) {
+				msg("Invalid -C option");
+				die();
+			}
+			configextra[numconfigextra++] = myoptarg;
+			break;
 		    case 'D': doom = atoi(myoptarg); break;
 		    case 'f':
 #ifdef USE_TRACE
@@ -421,13 +445,6 @@ main(int argc, char *argv[])
 #endif
 			break;
 		    case 's': pass_signals = 1; break;
-		    case 'S':
-			interval = atoi(myoptarg);
-			if (interval <= 1) {
-				msg("Invalid interval (must be at least 1)");
-			}
-			meter_setinterval(interval);
-			break;
 		    case 't': 
 #ifdef USE_TRACE
 			set_traceflags(myoptarg); 
@@ -439,6 +456,7 @@ main(int argc, char *argv[])
 			timeout = atoi(myoptarg);
 			if (timeout <= 1) {
 				msg("Invalid timeout (must be at least 2)");
+				die();
 			}
 			clock_setprogresstimeout(timeout);
 			break;
@@ -469,7 +487,7 @@ main(int argc, char *argv[])
 	
 	console_init(pass_signals);
 	clock_init();
-	ncpus = bus_config(config);
+	ncpus = bus_config(config, configextra, numconfigextra);
 	if (doom) {
 		doom_establish(doom);
 	}
@@ -517,5 +535,5 @@ main(int argc, char *argv[])
 	clock_cleanup();
 	console_cleanup();
 	
-	return 0;
+	return got_debugrequest ? SYS161_EXIT_CRASH : SYS161_EXIT_NORMAL;
 }

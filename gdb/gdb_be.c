@@ -174,7 +174,7 @@ gdb_startbreak(int dontwait, int lethal)
 	else {
 		if (dontwait && lethal) {
 			msg("Exiting instead of waiting for debugger...");
-			die();
+			crashdie();
 		}
 		else if (dontwait) {
 			msg("Not waiting for debugger...");
@@ -529,7 +529,7 @@ debug_exec(struct gdbcontext *ctx, const char *pkt)
 		// don't do this - debugger hangs up and we get SIGPIPE
 		//debug_send(ctx, "OK");
 		msg("Debugger requested kill");
-		die();
+		reqdie();
 		// To continue running instead of dying, do this instead
 		//unset_breakcond();
 		break;

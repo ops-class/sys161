@@ -109,6 +109,13 @@ compatibility with old configurations; ordinarily the size of the disk
 image is used.</td>
 </tr>
 <tr>
+<td colspan=2 valign=top><tt>size=</tt><em>size-spec</em></td>
+<td>Specify size of disk. Must be an integral number of 512-byte
+sectors; supports the same suffixes as disk161. Provided for
+compatibility with old configurations; ordinarily the size of the disk
+image is used.</td>
+</tr>
+<tr>
 <td colspan=2 valign=top><tt>file=</tt><em>filename</em></td>
 <td>Filename to use for disk storage. Required.</td>
 </tr>
@@ -164,9 +171,12 @@ symbolic links that point elsewhere.</td>
 is 1.</td>
 </tr>
 <tr>
-<td colspan=2 valign=top><tt>ramsize=</tt><em>bytes</em></td>
+<td colspan=2 valign=top><tt>ramsize=</tt><em>size-spec</em></td>
 <td>Specify size of physical RAM, up to 16 MB. Must be multiple of CPU
-page size, usually 4K. Required.</td>
+page size, usually 4K. Required. The suffixes <tt>M</tt>, <tt>K</tt>,
+or <tt>s</tt> may be used to indicate megabytes, kilobytes, or sectors
+(512-byte units) respectively.
+</td>
 </tr>
 <tr>
 <td colspan=3><A HREF=lamebus.html#controller>Programming information</A></td>

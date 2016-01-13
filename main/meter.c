@@ -243,8 +243,3 @@ meter_init(const char *pathname)
 	meter_socket = sfd;
 	onselect(meter_socket, NULL, meter_accept, NULL);
 }
-
-void
-meter_setinterval(int interval) {
-  meter_interval = interval;
-}

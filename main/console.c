@@ -11,6 +11,7 @@
 #include <signal.h>
 #include "config.h"
 
+#include "exitcodes.h"
 #include "onsel.h"
 #include "console.h"
 #include "cpu.h"
@@ -252,7 +253,7 @@ dowrite(int fd, const char *buf, size_t len)
 			evil++;
 			console_cleanup();
 		}
-		exit(1);
+		exit(SYS161_EXIT_ERROR);
 	}
 	return (unsigned) r;
 }
@@ -600,14 +601,33 @@ console_beep(void)
 ////////////////////////////////////////////////////////////
 // Message output
 
+static
 void
-die(void)
+commondie(int code)
 {
 #ifdef USE_TRACE
 	prof_write();
 #endif
 	console_cleanup();
-	exit(1);
+	exit(code);
+}
+
+void
+die(void)
+{
+	commondie(SYS161_EXIT_ERROR);
+}
+
+void
+crashdie(void)
+{
+	commondie(SYS161_EXIT_CRASH);
+}
+
+void
+reqdie(void)
+{
+	commondie(SYS161_EXIT_REQUESTED);
 }
 
 void

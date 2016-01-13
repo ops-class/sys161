@@ -17,7 +17,8 @@ int bus_io_store(unsigned cpunum, uint32_t addr, uint32_t);
 /*
  * Set up bus and cards in bus. Returns number of CPUs to pass to cpu_init.
  */
-unsigned bus_config(const char *configfile);
+unsigned bus_config(const char *configfile,
+		    const char *configextra[], unsigned numconfigextra);
 
 /*
  * Clean up bus in preparation for exit.

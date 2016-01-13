@@ -4,6 +4,11 @@
  */
 void main_poweroff(void);
 
+/*
+ * Tell mainloop that at least one explicit debugger request was
+ * encountered. This typically means the OS panic'd.
+ */
+void main_note_debugrequest(void);
 
 /*
  * Tell mainloop it should suspend execution.

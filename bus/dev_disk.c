@@ -168,7 +168,7 @@ doom_tick(void)
 		doom_counter--;
 		if (doom_counter == 0) {
 			msg("DOOOOOOOOOOOM");
-			die();
+			reqdie();
 		}
 	}
 }
@@ -517,6 +517,8 @@ compute_sectors(struct disk_data *dd)
 
 		if (sectors < 2.0) {
 			/* too small */
+			msg("disk: slot %d: track %u has only one sector",
+			    dd->dd_slot, i);
 			return -1;
 		}
 
@@ -534,6 +536,8 @@ compute_sectors(struct disk_data *dd)
 		/* 
 		 * Shouldn't happen. If it does, increase SECTOR_FUDGE.
 		 */
+		msg("disk: slot %d: Not enough SECTOR_FUDGE",
+		    dd->dd_slot);
 		return -1;
 	}
 
@@ -691,6 +695,7 @@ disk_init(int slot, int argc, char *argv[])
 {
 	struct disk_data *dd;
 	const char *filename = NULL;
+	off_t size;
 	uint32_t totsectors=0;
 	uint32_t rpm = 3600;
 	int i, paranoid=0, usedoom = 1;
@@ -701,6 +706,15 @@ disk_init(int slot, int argc, char *argv[])
 		}
 		else if (!strncmp(argv[i], "sectors=", 8)) {
 			totsectors = atoi(argv[i]+8);
+		}
+		else if (!strncmp(argv[i], "size=", 5)) {
+			size = getsize(argv[i]+5);
+			if (size % SECTSIZE) {
+				msg("disk: slot %d: Configured size is not a "
+				    "unit number of sectors", slot);
+				die();
+			}
+			totsectors = size / SECTSIZE;
 		}
 		else if (!strncmp(argv[i], "file=", 5)) {
 			filename = argv[i]+5;
