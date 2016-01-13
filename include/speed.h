@@ -29,7 +29,11 @@
 // Profile at 1000 Hz for increased accuracy.
 #define PROFILE_NSECS  (1000000)
 
-// Emit perfmeter data every 2/10 of a second.
-#define METER_NSECS    (200000000)
+// Emit perfmeter data every 2/10 of a second by default. Max and min are 1s
+// and 100us respectively.
+#define DEFAULT_INTERVAL (200000000)
+#define MIN_INTERVAL     (100)
+#define MAX_INTERVAL     (1000000000)
+
 
 #endif /* SPEED_H */

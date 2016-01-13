@@ -25,7 +25,7 @@ struct meter {
 };
 
 static int meter_socket = -1;
-static int meter_interval = METER_NSECS;
+static int meter_interval = DEFAULT_INTERVAL;
 
 static
 void
@@ -134,6 +134,37 @@ meter_update(void *x, uint32_t junk)
 }
 
 static
+void
+processline(char *line)
+{
+	char *words[32];
+	char *s;
+	int nwords, new_interval;
+
+	nwords = 0;
+	for (s = strtok(line, " \t\r\n"); s; s = strtok(NULL, " \t\r\n")) {
+		if (nwords < 32) {
+			words[nwords++] = s;
+		}
+	}
+
+	if (nwords==0) {
+		return;
+	}
+	if (!strcasecmp(words[0], "interval")) {
+		new_interval = atoi(words[1]);
+		if (new_interval >= MIN_INTERVAL && new_interval <= MAX_INTERVAL) {
+			meter_interval = new_interval;
+		} else {
+			printf("stat161: Invalid meter interval (too large or small)\n");
+		}
+	}
+	else {
+		printf("stat161: Invalid packet (improper header)\n");
+	}
+}
+
+static
 int
 meter_receive(void *x)
 {
@@ -147,9 +178,11 @@ meter_receive(void *x)
 		close(m->fd);
 		m->fd = -1;
 		return -1;
+	} else if (r==0) {
+		return;
+	} else {
+		processline(buf);
 	}
-
-	/* otherwise, ignore anything sent to us */
 	return 0;
 }
 

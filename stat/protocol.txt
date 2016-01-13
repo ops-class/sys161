@@ -13,16 +13,17 @@ missing.
 
 The protocol is not case-sensitive.
 
-Nothing is sent from the client to System/161; the clients are
-read-only.
-
-The following messages are defined:
+The following messages are sent from the server to the client:
 
    ERROR [optional error text]	
    HELLO version
    HEAD [word]...
    WIDTH [number]...
    DATA [number]...
+
+The following messages are sent from client to the server:
+
+	 INTERVAL [number]   
 
 The ERROR message indicates that something is wrong on System/161's
 end. The connection is then terminated.
@@ -63,3 +64,7 @@ However, these are the fields sent by sys161 as of this writing:
 	emu		Emufs device operations count.
 	net		Network I/O packet count.
 
+INTERVAL is used to change the data reporting interval. The interval is in
+nanoseconds and is a single integer. Values between 1000000000 (1s) and 100
+(0.1us) are accepted. Others will fail silently and not change the reporting
+interval. The default interval is 0.2s (200000000).

@@ -1,4 +1,6 @@
 *~
+*.swp
+*.swo
 Makefile
 /build-*
 defs.mk
