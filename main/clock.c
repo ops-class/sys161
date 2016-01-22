@@ -444,17 +444,18 @@ clock_waitirq(void)
 	}
 }
 
-inline
-static
+////////////////////////////////////////////////////////////
+// auxiliary external clock interfaces
+
 void
-clock_timeoffset(uint32_t offset_secs, uint32_t offset_nsecs, uint32_t *secs_ret, uint32_t *nsecs_ret)
+clock_time(uint32_t *secs_ret, uint32_t *nsecs_ret)
 {
 	uint64_t now;
 	uint32_t secs, nsecs;
 
 	now = clock_vnow();
-	secs = offset_secs + now / NSECS_PER_SEC;
-	nsecs = offset_nsecs + now % NSECS_PER_SEC;
+	secs = start_secs + now / NSECS_PER_SEC;
+	nsecs = start_nsecs + now % NSECS_PER_SEC;
 	if (nsecs > NSECS_PER_SEC) {
 		nsecs -= NSECS_PER_SEC;
 		secs++;
@@ -467,19 +468,10 @@ clock_timeoffset(uint32_t offset_secs, uint32_t offset_nsecs, uint32_t *secs_ret
 	}
 }
 
-////////////////////////////////////////////////////////////
-// auxiliary external clock interfaces
-
-void
-clock_time(uint32_t *secs_ret, uint32_t *nsecs_ret)
+uint64_t
+clock_monotime(void)
 {
-	return clock_timeoffset(start_secs, start_nsecs, secs_ret, nsecs_ret);
-}
-
-void
-clock_offset(uint32_t *secs_ret, uint32_t *nsecs_ret)
-{
-	return clock_timeoffset(0, 0, secs_ret, nsecs_ret);
+	return clock_vnow();
 }
 
 void

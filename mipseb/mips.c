@@ -3539,6 +3539,7 @@ cpu_cycles(uint64_t maxcycles)
 		if (cpu_running_mask == 0) {
 			/* nothing occurs until we reach maxcycles */
 			if (cpu_cycling) {
+				g_stats.s_tot_icycles += maxcycles - i;
 				i = maxcycles;
 			}
 		}

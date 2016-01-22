@@ -1,3 +1,4 @@
+#include <sys/types.h> /* required for off_t on linux */
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

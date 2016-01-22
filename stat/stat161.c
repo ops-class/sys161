@@ -14,10 +14,7 @@
 #define MAXFIELDS	16
 #define MAXHEADERLEN	16
 #define PATH_SOCKET	".sockets/meter"
-#define PROTO_VERSION	1
-
-/* Default statistics interval (0.2s). */
-int interval = 200000000;
+#define PROTO_VERSION	2
 
 struct field {
 	uint64_t lastval;
@@ -159,7 +156,7 @@ processline(char *line)
 {
 	char *words[32];
 	char *s;
-	int nwords;
+	int nwords, i;
 
 	nwords = 0;
 	for (s = strtok(line, " \t\r\n"); s; s = strtok(NULL, " \t\r\n")) {
@@ -192,6 +189,16 @@ processline(char *line)
 	else if (!strcasecmp(words[0], "data") && nwords>1) {
 		showdata(nwords-1, words+1);
 	}
+	else if (!strcasecmp(words[0], "ok")) {
+		/* nothing */
+	}
+	else if (!strcasecmp(words[0], "bad")) {
+		printf("stat161: sys161 error:");
+		for (i=1; i<nwords; i++) {
+			printf(" %s", words[i]);
+		}
+		printf("\n");
+	}
 	else {
 		printf("stat161: Invalid packet (improper header)\n");
 	}
@@ -199,13 +206,13 @@ processline(char *line)
 
 static
 void
-dometer(int s)
+dometer(int s, unsigned interval)
 {
 	char buf[4096], *x;
 	size_t bufpos=0;
-	int r, l;
+	int r;
 
-	snprintf(buf, sizeof(buf), "INTERVAL %d\n", interval);
+	snprintf(buf, sizeof(buf), "INTERVAL %u\r\n", interval);
 	r = write(s, buf, strlen(buf));
 	if (r<0) {
 		fprintf(stderr, "stat161: write: %s\n", strerror(errno));
@@ -280,7 +287,7 @@ opensock(void)
 
 static
 void
-loop(void)
+loop(unsigned interval)
 {
 	int s;
 
@@ -290,7 +297,7 @@ loop(void)
 		if (s>=0) {
 			printf("stat161: Connected.\n");
 			reset();
-			dometer(s);
+			dometer(s, interval);
 			close(s);
 			printf("stat161: Disconnected.\n");
 		}
@@ -305,7 +312,8 @@ void
 usage(void)
 {
 	fprintf(stderr, "Usage: stat161 [-i interval]\n");
-	fprintf(stderr, "   -i interval    Set data reporting interval in s (default 0.2)\n");
+	fprintf(stderr, "   -i interval  Set sampling interval,"
+		" in seconds (default 0.2)\n");
 	exit(3);
 }
 
@@ -313,25 +321,32 @@ int
 main(int argc, char *argv[])
 {
 	int opt;
-	float interval_sec;
+	double secs;
+
+	/* Default sampling interval (0.2s). */
+	unsigned nsecs = 200000000;
 
 	while ((opt = getopt(argc, argv, "i:"))!=-1) {
 		switch (opt) {
 		    case 'i':
-					interval_sec = atof(optarg);
-					// Float equality is a bit funny.
-					if (interval_sec > 1.0 || interval_sec < 0.000009999) {
-						fprintf(stderr, "Invalid -i option (max 1.0, min 0.00001)\n");
-						exit(1);
-					}
-					interval_sec *= 1000 * 1000 * 1000;
-					interval = (int) interval_sec;
-					break;
-				default:
-						usage();
+			secs = atof(optarg);
+			if (secs > 2.0) {
+				fprintf(stderr, "Sampling interval too large"
+					" (max is 2)\n");
+				exit(1);
+			}
+			nsecs = (unsigned)(secs * 1000000000);
+			if (nsecs < 10000) {
+				fprintf(stderr, "Sampling interval too small"
+					" (min is 0.00001)\n");
+				exit(1);
+			}
+			break;
+		    default:
+			usage();
 		}
 	}
 	signal(SIGPIPE, SIG_IGN);
-	loop();
+	loop(nsecs);
 	return 0;
 }

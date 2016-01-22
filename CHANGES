@@ -1,4 +1,14 @@
-20160113 gwa		Add interval support for stat161.
+20160117 dholland	System/161 2.0.6 released.
+20160117 dholland	util.c needs sys/types.h; from Nikhil Benesch.
+20160116 dholland	Don't let the dropped input character messages flood.
+
+20160114 dholland	System/161 2.0.5 released.
+20160114 dholland	Fix a bug counting global-idle cycles.
+20160114 dholland	Drop redundant columns in stat161 output.
+20160114 dholland	Polish previous.
+20160113 gwa		Make stat161's reporting interval adjustable.
+20160113 gwa		Have stat161 report elapsed clock time per tick.
+20160112 dholland	Print a message if the OS drops an input character.
 20160108 dholland	Print why if disk geometry initializion fails.
 20160105 dholland	Standardize and document the exit codes.
 20160105 dholland	Allow K, M, etc. suffixes for disk/memory sizes.

@@ -798,7 +798,6 @@ console_getsignals(void)
 	signal(SIGKILL, console_sig);	// won't work, but try anyway
 	signal(SIGBUS, console_sig);
 	signal(SIGSEGV, console_sig);
-	signal(SIGPIPE, console_sig);
 	signal(SIGALRM, console_sig);
 	signal(SIGTERM, console_sig);
 	signal(SIGURG, console_sig);
@@ -819,6 +818,14 @@ console_getsignals(void)
 #ifdef SIGPWR
 	signal(SIGPWR, console_sig);
 #endif
+
+	/*
+	 * Don't crash on SIGPIPE; ignore it instead. We poll all our
+	 * fds regularly and check for EOF, so we don't need it, and
+	 * if something closes between calling select and writing to
+	 * it we die unnecessarily.
+	 */
+	signal(SIGPIPE, SIG_IGN);
 }
 
 #endif /* USE_TRACE */
@@ -939,6 +946,8 @@ console_init(int pass_signals)
 
 #ifdef USE_TRACE
 	console_getsignals();
+#else
+	signal(SIGPIPE, SIG_IGN);
 #endif /* USE_TRACE */
 
 	stdin_generates_signals = !pass_signals;

@@ -16,6 +16,8 @@ The protocol is not case-sensitive.
 The following messages are sent from the server to the client:
 
    ERROR [optional error text]	
+   BAD [optional error text]
+   OK
    HELLO version
    HEAD [word]...
    WIDTH [number]...
@@ -23,15 +25,21 @@ The following messages are sent from the server to the client:
 
 The following messages are sent from client to the server:
 
-	 INTERVAL [number]
+   INTERVAL [nsecs]
 
 The ERROR message indicates that something is wrong on System/161's
 end. The connection is then terminated.
 
+BAD is sent in response to an invalid client request. (ERROR, by
+contrast, reflects an error on the server side that might have been
+asynchronously generated.)
+
+OK is sent in response to successful client request.
+
 HELLO is issued to new clients upon connection. The version number is
 a single integer. If the version is not one the client is prepared to
 handle, it should disconnect. The version described in this file is
-"1".
+"2".
 
 HEAD is sent upon connection, after HELLO. It contains a short
 identifying string for each statistic reported by System/161. These
@@ -40,7 +48,7 @@ strings are alphanumeric text and contain no spaces or punctuation.
 WIDTH is sent following HEAD. For each column, it reports a suggested
 field width for printing.
 
-DATA is sent at regular intervals (presently every 0.2 seconds) in
+DATA is sent at regular intervals (by default every 0.2 seconds) in
 simulator time. The DATA line represents a row of data, and each
 number is one field. (The strings sent by the HEAD message identify
 the fields.) Note that some of the data will require 64-bit integers
@@ -51,11 +59,18 @@ messages must be consistent with one another.
 
 The values sent are cumulative since simulator startup.
 
+INTERVAL is used to change the data reporting interval. The interval
+is a single integer measured in nanoseconds. Values between 100 (0.1
+us) and 2000000000 (2 sseconds) are accepted. Others will fail. The
+default interval is 200000000 (0.2 seconds).
+
 The fields and their meanings are not defined as part of the protocol.
 However, these are the fields sent by sys161 as of this writing:
 
-	kern		Processor cycles in kernel mode.
-	user		Processor cycles in user mode.
+	nsec		Simulator time (since startup) in nanoseconds.
+	kinsns		Kernel-level instructions retired.
+	uinsns		User-level instructions retired.
+	udud		User-level cycles spent not making progress.
 	idle		Processor cycles in idle mode.
 	irqs		Interrupt count.
 	exns		Exception count.
@@ -64,7 +79,3 @@ However, these are the fields sent by sys161 as of this writing:
 	emu		Emufs device operations count.
 	net		Network I/O packet count.
 
-INTERVAL is used to change the data reporting interval. The interval is in
-nanoseconds and is a single integer. Values between 1000000000 (1s) and 100
-(0.1us) are accepted. Others will fail silently and not change the reporting
-interval. The default interval is 0.2s (200000000).

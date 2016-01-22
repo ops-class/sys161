@@ -5,7 +5,7 @@
 .Nm stat161
 .Nd System/161 status monitor
 .Sh SYNOPSIS
-.Nm stat161
+.Nm stat161 Op Fl i Ar interval
 .Sh DESCRIPTION
 The
 .Nm stat161
@@ -16,6 +16,40 @@ waits until one starts, polling once per second.
 If the System/161 process exits,
 .Nm stat161
 disconnects from it and waits for another to start.
+.Pp
+The
+.Fl i Ar interval
+option sets the reporting interval in seconds of virtual time; valid
+values are between 0.00001 (10 microseconds) and 2.
+The default is 0.2.
+.Pp
+The counters printed are as follows:
+.Bl -tag -width kinsnsww -compact -offset indent
+.It nsec
+Virtual time in nanoseconds.
+.It kinsns
+Instructions retired in supervisor (kernel) mode.
+.It uinsns
+Instructions retired in user mode.
+.It udud
+Unproductive cycles spent in user mode.
+(These represent instructions that were interrupted and aborted.)
+.It idle
+Cycles spent idle.
+.It irqs
+Number of interrupts taken.
+.It exns
+Nunmber of processor exceptions taken.
+.It disk
+Number of disk I/Os.
+.It con
+Number of console I/Os.
+.It emu
+Number of emufs I/Os.
+.It net
+Number of network I/Os.
+.El
+The values printed are totals across all CPUs.
 .Sh FILES
 .Bl -tag -width .sockets/meter -compact
 .It Pa .sockets/meter
