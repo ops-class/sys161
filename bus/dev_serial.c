@@ -114,9 +114,6 @@ serial_pushinput(void *d, uint32_t junk)
 	}
 	else if (!sd->sd_didread) {
 		sd->sd_droppedreads++;
-		if (sd->sd_droppedreads % 1024 == 0) {
-			msg("[.]");
-		}
 		if (sd->sd_droppedreads == 1000000000 / SERIAL_NSECS) {
 			msg("Kernel not responding; console input suspended");
 		}
