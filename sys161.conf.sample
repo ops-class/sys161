@@ -143,8 +143,8 @@
 
 1	emufs
 
-2	disk	rpm=7200	size=5M 	file=LHD0.img   nodoom
-3	disk	rpm=7200	size=5M 	file=LHD1.img
+2	disk	rpm=7200	file=LHD0.img   nodoom
+3	disk	rpm=7200	file=LHD1.img
 
 #27	nic hwaddr=1
 

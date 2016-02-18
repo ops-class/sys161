@@ -1,3 +1,10 @@
+20160217 dholland	System/161 2.0.7 released.
+20160217 dholland	Print more info with exception traces.
+20160217 dholland	Remove obsolete disk sizes from sys161.conf.sample.
+20160216 dholland	Reuse emufs handles when the same object is reopened.
+........        	".." usage now behaves itself. Mostly from Sam Fishman.
+20160211 dholland	Remove stray debug print.
+
 20160117 dholland	System/161 2.0.6 released.
 20160117 dholland	util.c needs sys/types.h; from Nikhil Benesch.
 20160116 dholland	Don't let the dropped input character messages flood.

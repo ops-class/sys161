@@ -906,14 +906,19 @@ phony_exception(struct mipscpu *cpu)
 
 static
 void
-exception(struct mipscpu *cpu, int code, int cn_or_user, uint32_t vaddr)
+exception(struct mipscpu *cpu, int code, int cn_or_user, uint32_t vaddr,
+	  const char *exception_name_supplement)
 {
 	//uint32_t bits;
 	int boot = (cpu->status_bootvectors) != 0;
 
 	CPUTRACE(DOTRACE_EXN, cpu->cpunum,
-		 "exception: code %d (%s), expc %x, vaddr %x, sp %x", 
-		 code, exception_name(code), cpu->expc, vaddr, cpu->r[29]);
+		 "exception: code %d (%s%s), expc %x, vaddr %x, sp %x", 
+		 code, exception_name(code), exception_name_supplement,
+		 cpu->expc, vaddr, cpu->r[29]);
+#ifndef USE_TRACE
+	(void)exception_name_supplement;
+#endif
 
 	if (code==EX_IRQ) {
 		g_stats.s_irqs++;
@@ -1003,7 +1008,7 @@ translatemem(struct mipscpu *cpu, uint32_t vaddr, int iswrite, uint32_t *ret)
 	seg = vaddr >> 30;
 
 	if ((vaddr >= 0x80000000 && IS_USERMODE(cpu)) || (vaddr & 0x3)!=0) {
-		exception(cpu, iswrite ? EX_ADES : EX_ADEL, 0, vaddr);
+		exception(cpu, iswrite ? EX_ADES : EX_ADEL, 0, vaddr, "");
 		return -1;
 	}
 
@@ -1029,8 +1034,8 @@ translatemem(struct mipscpu *cpu, uint32_t vaddr, int iswrite, uint32_t *ret)
 		if (ix<0) {
 			int exc = iswrite ? EX_TLBS : EX_TLBL;
 			int isuseraddr = vaddr < 0x80000000;
-			CPUTRACE(DOTRACE_TLB, cpu->cpunum, "MISS");
-			exception(cpu, exc, isuseraddr, vaddr);
+			CPUTRACE(DOTRACE_TLB, cpu->cpunum, "no match");
+			exception(cpu, exc, isuseraddr, vaddr, ", miss");
 			return -1;
 		}
 		TLBTRP(&cpu->tlb[ix]);
@@ -1039,12 +1044,12 @@ translatemem(struct mipscpu *cpu, uint32_t vaddr, int iswrite, uint32_t *ret)
 		if (!cpu->tlb[ix].mt_valid) {
 			int exc = iswrite ? EX_TLBS : EX_TLBL;
 			CPUTRACE(DOTRACE_TLB, cpu->cpunum, " - INVALID");
-			exception(cpu, exc, 0, vaddr);
+			exception(cpu, exc, 0, vaddr, ", invalid");
 			return -1;
 		}
 		if (iswrite && !cpu->tlb[ix].mt_dirty) {
 			CPUTRACE(DOTRACE_TLB, cpu->cpunum, " - READONLY");
-			exception(cpu, EX_MOD, 0, vaddr);
+			exception(cpu, EX_MOD, 0, vaddr, "");
 			return -1;
 		}
 		CPUTRACE(DOTRACE_TLB, cpu->cpunum, " - OK");
@@ -1170,7 +1175,7 @@ accessmem(struct mipscpu *cpu, uint32_t paddr, int iswrite, uint32_t *val)
 	}
 
 	if (buserr) {
-		exception(cpu, EX_DBE, 0, 0);
+		exception(cpu, EX_DBE, 0, 0, "");
 		return -1;
 	}
 	
@@ -1245,7 +1250,7 @@ precompute_pc(struct mipscpu *cpu)
 	}
 	cpu->pcpage = mapmem(physpc);
 	if (cpu->pcpage == NULL) {
-		exception(cpu, EX_IBE, 0, 0);
+		exception(cpu, EX_IBE, 0, 0, "");
 		if (cpu->pcpage == NULL) {
 			smoke("Bus error invoking exception handler");
 		}
@@ -1265,7 +1270,7 @@ precompute_nextpc(struct mipscpu *cpu)
 	}
 	cpu->nextpcpage = mapmem(physnext);
 	if (cpu->nextpcpage == NULL) {
-		exception(cpu, EX_IBE, 0, 0);
+		exception(cpu, EX_IBE, 0, 0, "");
 		if (cpu->nextpcpage == NULL) {
 			smoke("Bus error invoking exception handler");
 		}
@@ -1446,7 +1451,7 @@ abranch(struct mipscpu *cpu, uint32_t addr)
 		 "jump: %x -> %x", cpu->nextpc-8, addr);
 
 	if ((addr & 0x3) != 0) {
-		exception(cpu, EX_ADEL, 0, addr);
+		exception(cpu, EX_ADEL, 0, addr, ", branch");
 		return;
 	}
 
@@ -1719,7 +1724,7 @@ static int tracehow;		// how to trace the current instruction
 #define SETHI(n)   (cpu->hiwait = (n))
 #define SETLO(n)   (cpu->lowait = (n))
 
-#define OVF	  { exception(cpu, EX_OVF, 0, 0); }
+#define OVF	  { exception(cpu, EX_OVF, 0, 0, ""); }
 #define CHKOVF(v) {if (((int64_t)(int32_t)(v))!=(v)) { OVF; return; }}
 
 #define TRL(...)  CPUTRACEL(tracehow, cpu->cpunum, __VA_ARGS__)
@@ -1746,7 +1751,7 @@ domf(struct mipscpu *cpu, int cn, unsigned reg, unsigned sel, int32_t *greg)
 	unsigned regsel;
 	
 	if (cn!=0 || IS_USERMODE(cpu)) {
-		exception(cpu, EX_CPU, cn, 0);
+		exception(cpu, EX_CPU, cn, 0, ", mfc instruction");
 		return;
 	}
 
@@ -1777,7 +1782,7 @@ domf(struct mipscpu *cpu, int cn, unsigned reg, unsigned sel, int32_t *greg)
 	    case C0_CONFIG7: *greg = cpu->ex_config7; break;
 #endif
 	    default:
-		exception(cpu, EX_RI, cn, 0);
+		exception(cpu, EX_RI, cn, 0, ", invalid cop0 register");
 		break;
 	}
 }
@@ -1789,7 +1794,7 @@ domt(struct mipscpu *cpu, int cn, int reg, int sel, int32_t greg)
 	unsigned regsel;
 
 	if (cn!=0 || IS_USERMODE(cpu)) {
-		exception(cpu, EX_CPU, cn, 0);
+		exception(cpu, EX_CPU, cn, 0, ", mtc instruction");
 		return;
 	}
 
@@ -1836,7 +1841,7 @@ domt(struct mipscpu *cpu, int cn, int reg, int sel, int32_t greg)
 	    case C0_CONFIG6: /* read-only register */ break;
 	    case C0_CONFIG7: /* read-only register */ break;
 	    default:
-		exception(cpu, EX_RI, cn, 0);
+		exception(cpu, EX_RI, cn, 0, ", invalid cop0 register");
 		break;
 	}
 }
@@ -1847,7 +1852,7 @@ dolwc(struct mipscpu *cpu, int cn, uint32_t addr, int reg)
 {
 	(void)addr;
 	(void)reg;
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", lwc instruction");
 }
 
 static
@@ -1856,7 +1861,7 @@ doswc(struct mipscpu *cpu, int cn, uint32_t addr, int reg)
 {
 	(void)addr;
 	(void)reg;
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", swc instruction");
 }
 
 static
@@ -1951,7 +1956,7 @@ mx_bcf(struct mipscpu *cpu, uint32_t insn)
 	NEEDSMM; NEEDCN;
 	(void)smm;
 	TR("bc%df %ld", cn, (long)smm);
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", bcf instruction");
 }
 
 static
@@ -1962,7 +1967,7 @@ mx_bct(struct mipscpu *cpu, uint32_t insn)
 	NEEDSMM; NEEDCN;
 	(void)smm;
 	TR("bc%dt %ld", cn, (long)smm);
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", bct instruction");
 }
 
 static
@@ -2121,7 +2126,7 @@ mx_cache(struct mipscpu *cpu, uint32_t insn)
 	 * allowed to unprivileged code. So, better to be safe.
 	 */
 	if (IS_USERMODE(cpu)) {
-		exception(cpu, EX_CPU, 0 /*cop0*/, 0);
+		exception(cpu, EX_CPU, 0 /*cop0*/, 0, ", cache instruction");
 		return;
 	}
 
@@ -2285,7 +2290,7 @@ mx_cf(struct mipscpu *cpu, uint32_t insn)
 	(void)rt;
 	(void)rd;
 	TR("cfc%d %s, $%u", cn, regname(rt), rd);
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", cfc instruction");
 }
 
 static
@@ -2297,7 +2302,7 @@ mx_ct(struct mipscpu *cpu, uint32_t insn)
 	(void)rt;
 	(void)rd;
 	TR("ctc%d %s, $%u", cn, regname(rt), rd);
-	exception(cpu, EX_CPU, cn, 0);
+	exception(cpu, EX_CPU, cn, 0, ", ctc instruction");
 }
 
 static
@@ -2611,7 +2616,7 @@ mx_break(struct mipscpu *cpu, uint32_t insn)
 {
 	(void)insn;
 	TR("break");
-	exception(cpu, EX_BP, 0, 0);
+	exception(cpu, EX_BP, 0, 0, "");
 }
 
 static
@@ -3057,7 +3062,7 @@ mx_syscall(struct mipscpu *cpu, uint32_t insn)
 {
 	(void)insn;
 	TR("syscall");
-	exception(cpu, EX_SYS, 0, 0);
+	exception(cpu, EX_SYS, 0, 0, "");
 }
 
 static
@@ -3146,7 +3151,7 @@ mx_ill(struct mipscpu *cpu, uint32_t insn)
 {
 	(void)insn;
 	TR("[illegal instruction %08lx]", (unsigned long) insn);
-	exception(cpu, EX_RI, 0, 0);
+	exception(cpu, EX_RI, 0, 0, "");
 }
 
 /*
@@ -3163,11 +3168,11 @@ mx_copz(struct mipscpu *cpu, uint32_t insn)
 	uint32_t copop;
 
 	if (cn!=0) {
-		exception(cpu, EX_CPU, cn, 0);
+		exception(cpu, EX_CPU, cn, 0, ", copz instruction");
 		return;
 	}
 	if (IS_USERMODE(cpu)) {
-		exception(cpu, EX_CPU, cn, 0);
+		exception(cpu, EX_CPU, cn, 0, ", copz instruction");
 		return;
 	}
 
@@ -3259,7 +3264,11 @@ cpu_cycle(void)
 				 ipi ? " IPI" : "",
 				 timer ? " timer" : "",
 				 soft ? " soft" : "");
-			exception(cpu, EX_IRQ, 0, 0);
+			exception(cpu, EX_IRQ, 0, 0,
+				  lb ? ", LAMEbus" :
+				  ipi ? ", IPI" :
+				  timer ? ", timer" :
+				  soft ? ", softirq" : "");
 			/*
 			 * Start processing the interrupt this cycle.
 			 *
