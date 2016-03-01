@@ -43,7 +43,7 @@
  *           RLEN: maximum length to read
  *           ROP:  5
  *
- *           Data is read. 
+ *           Data is read.
  *
  *           ROFF: updated
  *           RLEN: length of read performed
@@ -70,7 +70,7 @@
  *           ROP:  7
  *           IOB:  contains data
  *
- *           Data is written. 
+ *           Data is written.
  *
  *           ROFF: updated
  *           RLEN: length of write performed
@@ -189,7 +189,7 @@ pushdir(int fd, int h)
 	}
 
 	if (fchdir(fd)) {
-		smoke("emufs: fchdir [handle %d, fd %d]: %s", h, fd, 
+		smoke("emufs: fchdir [handle %d, fd %d]: %s", h, fd,
 		      strerror(errno));
 	}
 
@@ -258,11 +258,13 @@ pickhandle(struct emufs_data *ed, dev_t dev, ino_t ino)
 				empty = i;
 			}
 		}
-		else if (ed->ed_handles[i].eh_dev == dev && 
+		else if (ed->ed_handles[i].eh_dev == dev &&
 			 ed->ed_handles[i].eh_ino == ino) {
 			return i;
 		}
 	}
+	ed->ed_handles[empty].eh_dev = dev;
+	ed->ed_handles[empty].eh_ino = ino;
 	return empty;
 }
 
@@ -277,7 +279,7 @@ emufs_openfirst(struct emufs_data *ed, const char *dir)
 
 	fd = open(dir, O_RDONLY);
 	if (fd<0) {
-		msg("emufs: slot %d: %s: %s", ed->ed_slot, dir, 
+		msg("emufs: slot %d: %s: %s", ed->ed_slot, dir,
 		    strerror(errno));
 		die();
 	}
@@ -295,12 +297,134 @@ emufs_openfirst(struct emufs_data *ed, const char *dir)
 }
 
 static
+unsigned
+emufs_open_and_stat(struct emufs_data *ed, int flags, struct stat *sbuf,
+		    int *fd_ret)
+{
+	int fd, err;
+
+	fd = open(ed->ed_buf, flags, 0664);
+	if (fd < 0) {
+		err = errno;
+		HWTRACE(DOTRACE_EMUFS, "%s", strerror(err));
+		return errno_to_code(err);
+	}
+	if (fstat(fd, sbuf) < 0) {
+		err = errno;
+		HWTRACE(DOTRACE_EMUFS, "fstat: %s", strerror(err));
+		return errno_to_code(err);
+	}
+
+	*fd_ret = fd;
+	return EMU_RES_SUCCESS;
+}
+
+static
+unsigned
+emufs_open_create(struct emufs_data *ed, int flags, int *handle_ret)
+{
+	struct stat sbuf;
+	unsigned status;
+	int handle, fd = -1;
+
+	status = emufs_open_and_stat(ed, flags, &sbuf, &fd);
+	if (status != EMU_RES_SUCCESS) {
+		return status;
+	}
+
+	handle = pickhandle(ed, sbuf.st_dev, sbuf.st_ino);
+	if (handle < 0) {
+		close(fd);
+		HWTRACE(DOTRACE_EMUFS, "out of handles");
+		return EMU_RES_NOHANDLES;
+	}
+
+	/*
+	 * If we created a new file and got back a file we already
+	 * have open, it means someone renamed the file under us
+	 * between the first stat call and the open. (It can't mean
+	 * that the old file was deleted and the inode number was
+	 * recycled, because we still have it open.)
+	 *
+	 * This can't happen if O_EXCL was used (unless the fs we're
+	 * running on is borked), but O_EXCL wasn't necessarily used;
+	 * so if this happens just reuse the existing handle for the
+	 * file and close the new fd.
+	 */
+	if (ed->ed_handles[handle].eh_fd >= 0) {
+		close(fd);
+	}
+	else {
+		ed->ed_handles[handle].eh_fd = fd;
+	}
+	*handle_ret = handle;
+	return EMU_RES_SUCCESS;
+}
+
+static
+unsigned
+emufs_open_existing(struct emufs_data *ed, int flags,
+		    dev_t expected_dev, ino_t expected_ino,
+		    int *handle_ret)
+{
+	struct stat sbuf;
+	unsigned status;
+	int handle, fd = -1;
+
+	/*
+	 * We might already have this file open, so look for it first.
+	 */
+	handle = pickhandle(ed, expected_dev, expected_ino);
+	if (handle < 0) {
+		HWTRACE(DOTRACE_EMUFS, "out of handles");
+		return EMU_RES_NOHANDLES;
+	}
+
+	/* If so, just return it. */
+	if (ed->ed_handles[handle].eh_fd >= 0) {
+		*handle_ret = handle;
+		return EMU_RES_SUCCESS;
+	}
+
+	while (1) {
+		status = emufs_open_and_stat(ed, flags, &sbuf, &fd);
+		if (status != EMU_RES_SUCCESS) {
+			return status;
+		}
+
+		/*
+		 * If we didn't get the same object we scoped out,
+		 * close and retry. This avoids allowing someone
+		 * manipulating symlinks under us to cause us to open
+		 * a second handle for the same file; that is mostly
+		 * harmless, but for the root dir it isn't, especially
+		 * when we finally get code to prohibit going outside
+		 * the root dir.
+		 */
+		if (sbuf.st_dev != expected_dev ||
+		    sbuf.st_ino != expected_ino) {
+			close(fd);
+			continue;
+		}
+
+		/* Succeeded. */
+		break;
+	}
+
+	ed->ed_handles[handle].eh_fd = fd;
+	*handle_ret = handle;
+	return EMU_RES_SUCCESS;
+}
+
+
+static
 uint32_t
 emufs_open(struct emufs_data *ed, int flags)
 {
-	int handle;
+	int handle = -1;
 	int curdir;
-	struct stat sbuf, sbuf2;
+	struct stat sbuf;
+	unsigned status;
 	int isdir;
 
 	if (ed->ed_iolen >= EMU_BUF_SIZE) {
@@ -315,7 +439,6 @@ emufs_open(struct emufs_data *ed, int flags)
 
 	curdir = pushdir(ed->ed_handles[ed->ed_handle].eh_fd, ed->ed_handle);
 
- retry:
 	if (stat(ed->ed_buf, &sbuf)) {
 		if (flags==0) {
 			/* not creating; doesn't exist -> fail */
@@ -327,6 +450,8 @@ emufs_open(struct emufs_data *ed, int flags)
 		/* creating; ok if it doesn't exist, and it's not a dir */
 		flags |= O_RDWR;
 		isdir = 0;
+
+		status = emufs_open_create(ed, flags, &handle);
 	}
 	else {
 		isdir = S_ISDIR(sbuf.st_mode)!=0;
@@ -336,49 +461,16 @@ emufs_open(struct emufs_data *ed, int flags)
 		else {
 			flags |= O_RDWR;
 		}
+		status = emufs_open_existing(ed, flags,
+					     sbuf.st_dev, sbuf.st_ino,
+					     &handle);
 	}
 
-	handle = pickhandle(ed, sbuf.st_dev, sbuf.st_ino);
-	if (handle < 0) {
-		HWTRACE(DOTRACE_EMUFS, "out of handles");
+	if (status != EMU_RES_SUCCESS) {
 		popdir(curdir);
-		return EMU_RES_NOHANDLES;
+		return status;
 	}
-
-	if (ed->ed_handles[handle].eh_fd < 0) {
-		ed->ed_handles[handle].eh_fd = open(ed->ed_buf, flags, 0664);
-		if (ed->ed_handles[handle].eh_fd < 0) {
-			int err = errno;
-
-			HWTRACE(DOTRACE_EMUFS, "%s", strerror(err));
-			popdir(curdir);
-			return errno_to_code(err);
-		}
-		if (fstat(ed->ed_handles[handle].eh_fd, &sbuf2) < 0) {
-			int err = errno;
-
-			HWTRACE(DOTRACE_EMUFS, "fstat: %s", strerror(err));
-			popdir(curdir);
-			return errno_to_code(err);
-		}
-		/*
-		 * If we didn't get the same object we scoped out,
-		 * close and retry. This avoids allowing someone
-		 * manipulating symlinks under us to cause us to open
-		 * a second handle for the same file; that is mostly
-		 * harmless, but for the root dir it isn't, especially
-		 * when we finally get code to prohibit going outside
-		 * the root dir.
-		 */
-		if (sbuf2.st_dev != sbuf.st_dev ||
-		    sbuf2.st_ino != sbuf.st_ino) {
-			close(ed->ed_handles[handle].eh_fd);
-			ed->ed_handles[handle].eh_fd = -1;
-			goto retry;
-		}
-		ed->ed_handles[handle].eh_dev = sbuf.st_dev;
-		ed->ed_handles[handle].eh_ino = sbuf.st_ino;
-	}
+	Assert(handle >= 0);
 
 	popdir(curdir);
 
@@ -509,7 +601,7 @@ emufs_readdir(struct emufs_data *ed)
 	close(herefd);
 
 	return EMU_RES_SUCCESS;
-#if 0	
+#if 0
 	/*
 	 * without fchdir, can't do it - there's no fdopendir() or equivalent.
 	 */
@@ -648,7 +740,7 @@ emufs_done(void *d, uint32_t gen)
 	emufs_setresult(ed, ed->ed_busyresult);
 	ed->ed_busy = 0;
 	ed->ed_busyresult = 0;
-	HWTRACE(DOTRACE_EMUFS, "emufs: slot %d: Operation complete", 
+	HWTRACE(DOTRACE_EMUFS, "emufs: slot %d: Operation complete",
 		ed->ed_slot);
 }
 
