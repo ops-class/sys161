@@ -1,3 +1,39 @@
+sys161 (2.0.8-0ubuntu2) precise; urgency=medium
+
+  * Release for precise.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Wed, 02 Mar 2016 12:13:28 -0500
+
+sys161 (2.0.8-0ubuntu1) trusty; urgency=medium
+
+  * 2.0.8 release.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Wed, 02 Mar 2016 12:06:44 -0500
+
+sys161 (2.0.7.1-0ubuntu4) precise; urgency=medium
+
+  * Release for precise. 
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Tue, 01 Mar 2016 14:26:56 -0500
+
+sys161 (2.0.7.1-0ubuntu3) trusty; urgency=medium
+
+  * 2.0.7 bug fix.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Tue, 01 Mar 2016 14:22:53 -0500
+
+sys161 (2.0.7-0ubuntu2) precise; urgency=medium
+
+  * Release for precise.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Thu, 18 Feb 2016 07:41:35 -0500
+
+sys161 (2.0.7-0ubuntu1) trusty; urgency=medium
+
+  * 2.0.7 release.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Thu, 18 Feb 2016 07:38:14 -0500
+
 sys161 (2.0.6-0ubuntu2) precise; urgency=medium
 
   * Release for precise.
