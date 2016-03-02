@@ -112,7 +112,7 @@ serial_pushinput(void *d, uint32_t junk)
 	if (sd->sd_inbufhead==sd->sd_inbuftail) {
 		sd->sd_rbusy = 0;
 	}
-	else if (!sd->sd_didread) {
+	else if (!sd->sd_didread && sd->sd_rirq.si_ready != 0) {
 		sd->sd_droppedreads++;
 		if (sd->sd_droppedreads == 1000000000 / SERIAL_NSECS) {
 			msg("Kernel not responding; console input suspended");

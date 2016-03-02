@@ -1,3 +1,9 @@
+20160301 dholland	System/161 2.0.8 released.
+20160301 dholland	Update copyright years. Noticed by Margo Seltzer.
+20160229 dholland	Fix handling of file creation in emufs, again.
+20160225 dholland	Fix another issue with dropped input handling,
+........         	reported by Sam Fishman.
+
 20160217 dholland	System/161 2.0.7 released.
 20160217 dholland	Print more info with exception traces.
 20160217 dholland	Remove obsolete disk sizes from sys161.conf.sample.

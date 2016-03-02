@@ -311,6 +311,7 @@ emufs_open_and_stat(struct emufs_data *ed, int flags, struct stat *sbuf,
 	}
 	if (fstat(fd, sbuf) < 0) {
 		err = errno;
+		close(fd);
 		HWTRACE(DOTRACE_EMUFS, "fstat: %s", strerror(err));
 		return errno_to_code(err);
 	}
@@ -371,22 +372,23 @@ emufs_open_existing(struct emufs_data *ed, int flags,
 	unsigned status;
 	int handle, fd = -1;
 
-	/*
-	 * We might already have this file open, so look for it first.
-	 */
-	handle = pickhandle(ed, expected_dev, expected_ino);
-	if (handle < 0) {
-		HWTRACE(DOTRACE_EMUFS, "out of handles");
-		return EMU_RES_NOHANDLES;
-	}
-
-	/* If so, just return it. */
-	if (ed->ed_handles[handle].eh_fd >= 0) {
-		*handle_ret = handle;
-		return EMU_RES_SUCCESS;
-	}
-
 	while (1) {
+		/*
+		 * We might already have this file open, so look for
+		 * it first.
+		 */
+		handle = pickhandle(ed, expected_dev, expected_ino);
+		if (handle < 0) {
+			HWTRACE(DOTRACE_EMUFS, "out of handles");
+			return EMU_RES_NOHANDLES;
+		}
+
+		/* If so, just return it. */
+		if (ed->ed_handles[handle].eh_fd >= 0) {
+			*handle_ret = handle;
+			return EMU_RES_SUCCESS;
+		}
+
 		status = emufs_open_and_stat(ed, flags, &sbuf, &fd);
 		if (status != EMU_RES_SUCCESS) {
 			return status;
@@ -400,15 +402,19 @@ emufs_open_existing(struct emufs_data *ed, int flags,
 		 * harmless, but for the root dir it isn't, especially
 		 * when we finally get code to prohibit going outside
 		 * the root dir.
+		 *
+		 * Note that if in the future we care about whether we
+		 * followed a link and what link it is, we need to
+		 * retry the initial stat as well as the open.
 		 */
-		if (sbuf.st_dev != expected_dev ||
-		    sbuf.st_ino != expected_ino) {
-			close(fd);
-			continue;
+		if (sbuf.st_dev == expected_dev &&
+		    sbuf.st_ino == expected_ino) {
+			break;
 		}
+		close(fd);
 
-		/* Succeeded. */
-		break;
+		expected_dev = sbuf.st_dev;
+		expected_ino = sbuf.st_ino;
 	}
 
 	ed->ed_handles[handle].eh_fd = fd;
