@@ -52,7 +52,7 @@ Commit everything to `master` before continuing.
 
 [source,bash]
 ----
-make test
+make -f Makefile.packaging test
 ----
 
 The above command will create a test package and use `pbuilder` to test a
@@ -69,7 +69,7 @@ You also need to silence any lintian warnings that may be generated.
 
 [source,bash]
 ----
-make sign
+make -f Makefile.packaging sign
 ----
 
 The above command will create and sign a build package for upload to the PPA.
