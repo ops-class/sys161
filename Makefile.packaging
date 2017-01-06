@@ -1,0 +1,16 @@
+export DISPLAY=
+
+test: clean
+	gbp buildpackage --git-builder="debuild -us -uc"
+	lintian packages/sys161*.deb
+	pbuilder-dist xenial build packages/sys161*.dsc
+
+sign: clean
+	gbp buildpackage --git-builder="debuild -S"
+
+clean:
+	@git clean -f -X -d
+
+.PHONY: test sign update clean
+
+# vim: ts=2:sw=2:noet

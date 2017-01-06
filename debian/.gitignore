@@ -1,0 +1,5 @@
+/sys161
+/tmp
+*.log
+*.substvars
+debhelper-build-stamp

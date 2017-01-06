@@ -1,3 +1,9 @@
+sys161 (2.0.8.1~xenial) xenial; urgency=medium
+
+  * Packaging for Xenial.
+
+ -- Geoffrey Challen <geoffrey.challen@gmail.com>  Fri, 06 Jan 2017 14:54:27 -0500
+
 sys161 (2.0.8-0ubuntu2) precise; urgency=medium
 
   * Release for precise.
