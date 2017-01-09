@@ -2,7 +2,7 @@ export DISPLAY=
 
 test: clean
 	gbp buildpackage --git-builder="debuild -us -uc"
-	lintian packages/*.deb --fail-on-warnings
+	lintian packages/*.deb --fail-on-warnings && lintian packages/*.dsc --fail-on-warnings
 	pbuilder-dist xenial build packages/*.dsc
 
 sign: clean
