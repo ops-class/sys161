@@ -1,8 +1,14 @@
 = Debian Packaging for `sys161`
 
 This repository contains scripts for building and packaging a binary version
-of http://os161.eecs.harvard.edu/[`sys161`] that can be uploaded and
-distributed through a Launchpad PPA.
+of
+//
+http://os161.eecs.harvard.edu/[`sys161`]
+//
+that can be uploaded and distributed through the
+//
+https://launchpad.net/~ops-class/+archive/ubuntu/os161-toolchain[`ops-class.org`
+Launchpad PPA].
 
 == Getting Started
 
