@@ -39,7 +39,7 @@ Here is the versioning convention that we have established for `sys161`:
 `2.0.8~xenial0`, the first package for Xenial based on `sys161` version
 `2.0.8`.
 //
-Bump the minor minor version number as needed to account for library changes,
+Bump the post-Xenial version number as needed to account for library changes,
 multiple distributions, build debugging, or any other reason.
 
 === Commiting Everything
