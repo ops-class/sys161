@@ -1,0 +1,81 @@
+= Debian Packaging for `sys161`
+
+This repository contains scripts for building and packaging a binary version
+of http://os161.eecs.harvard.edu/[`sys161`] that can be uploaded and
+distributed through a Launchpad PPA.
+
+== Getting Started
+
+The http://packaging.ubuntu.com/html/index.html[Ubuntu Packaging Guide] is a
+decent starting point for setting up your environment.
+//
+Although note that we are going to use the Git Package Builder (`gbp`) rather
+than the Bazaar-based tools.
+
+== Workflow
+
+Repackage `sys161` only when its sources have changed.
+//
+Unpack the tarball into this repository, build and test it, and commit your
+changes.
+//
+You will also need to know the current version number and have your Launchpad
+PPA signing key and password ready.
+
+=== Updating the Debian Changelog
+
+The next step is to update `debian/changelog`.
+//
+The `dch` tool is the easiest way to do this, although it can also be edited
+by hand.
+//
+Note that any time you publish to the PPA you *must bump the version number*
+or change the distribution string.
+//
+However, you do not need to bump the version number while testing local
+builds.
+
+Here is the versioning convention that we have established for `sys161`:
+`2.0.8.1~xenial`, the first (`.1`) package for Xenial based on `sys161`
+version `2.0.8`.
+//
+Bump the minor minor version number as needed to account for library changes,
+multiple distributions, build debugging, or any other reason.
+
+=== Commiting Everything
+
+The `gbp` tools will not run if the working directory is not clean.
+//
+Commit everything to `master` before continuing.
+
+=== Test Build
+
+[source,bash]
+----
+make -f Makefile.packaging test
+----
+
+The above command will create a test package and use `pbuilder` to test a
+clean build, but it does not sign packages.
+//
+You will need to install `pbuilder` and create an appropriate testing
+environment, currently for Xenial: `pbuilder-dist xenial create`.
+//
+Use it to iron out any build issues.
+//
+You also need to silence any lintian warnings that may be generated.
+
+=== Sign Build
+
+[source,bash]
+----
+make -f Makefile.packaging sign
+----
+
+The above command will create and sign a build package for upload to the PPA.
+//
+You will need to have a signing key installed and have the password ready.
+
+=== Upload Build
+
+At this point you should be ready to use `dput` to push this to your PPA.
