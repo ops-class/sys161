@@ -2,4 +2,4 @@ sys161 (2.0.8~xenial0) xenial; urgency=medium
 
   * Rebooting change log and changing version number convention.
 
- -- Geoffrey Challen <geoffrey.challen@gmail.com>  Mon, 09 Jan 2017 12:17:19 -0500
+ -- Scott Haseley <scott.haseley@gmail.com>  Mon, 09 Jan 2017 12:17:19 -0500
