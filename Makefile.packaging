@@ -2,8 +2,8 @@ export DISPLAY=
 
 test: clean
 	gbp buildpackage --git-builder="debuild -us -uc"
-	lintian packages/sys161*.deb
-	pbuilder-dist xenial build packages/sys161*.dsc
+	lintian packages/*.deb --fail-on-warnings
+	pbuilder-dist xenial build packages/*.dsc
 
 sign: clean
 	gbp buildpackage --git-builder="debuild -S"
