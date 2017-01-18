@@ -2,3 +2,4 @@ sys161 binary: file-in-unusual-dir
 sys161 binary: binary-without-manpage
 sys161 binary: latest-debian-changelog-entry-changed-to-native
 sys161 binary: extra-license-file usr/share/doc/sys161/copying.txt
+sys161 binary: latest-debian-changelog-entry-without-new-version
