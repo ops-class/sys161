@@ -2,7 +2,7 @@ sys161 (2.0.8~trusty0) trusty; urgency=medium
 
   * Release for trusty.
 
- -- Geoffrey Challen <geoffrey.challen@gmail.com>  Wed, 18 Jan 2017 12:16:00 -0500
+ -- Scott Haseley <scott.haseley@gmail.com>  Wed, 18 Jan 2017 12:16:00 -0500
 
 sys161 (2.0.8~xenial0) xenial; urgency=medium
 
